@@ -296,8 +296,8 @@ export class AuthService {
     return {
       accessToken: signResp.accessToken!,
       refreshToken: signResp.refreshToken!,
-      accessExp: Number(signResp.accessExp),
-      refreshExp: Number(signResp.refreshExp),
+      accessExp: accessTtl,
+      refreshExp: ttl,
     };
   }
 

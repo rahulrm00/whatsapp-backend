@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+
+  redis:
+    image: redis:7
+
+    container_name: redis_whatsapp
+
+    command: ["redis-server", "--appendonly", "yes"]
+
+    ports:
+      - "6380:6379"
+
+    restart: always
+
+    volumes:
+      - whatsapp_data:/data
+
+    networks:
+      - whatsapp_network
+
+volumes:
+  whatsapp_data:
+
+networks:
+  whatsapp_network:

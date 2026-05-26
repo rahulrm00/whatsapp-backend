@@ -13,5 +13,6 @@ import { Template, TemplateSchema } from './schemas/template.schema';
   ],
   controllers: [TemplatesController],
   providers: [TemplatesService,TemplateValidatorService,TemplateSyncService,MetaTemplateService],
+  exports: [TemplatesService],
 })
 export class TemplatesModule {}

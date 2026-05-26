@@ -112,6 +112,61 @@ export class TemplatesService {
     }
   }
 
+  async getTemplateById(id: string): Promise<SuccessResponseDto<TemplateResponseDto>> {
+    if (!id) {
+      throw new BadRequestException('Template ID is required');
+    }
+    try{
+       const template = await this.templateModel.findOne({
+        _id: id,
+        isDeleted: false,
+      }).lean();
+      if (!template) {
+        throw new BadRequestException('Template not found');
+      }
+      return {
+        success: true,
+        message: 'Template fetched successfully',
+        data: {
+          id: template._id.toString(),
+          tenantId: template.tenantId,
+          metaTemplateId: template.metaTemplateId,
+
+          name: template.name,
+
+          category: template.category as TemplateCategory,
+
+          language: template.language,
+
+          parameterFormat: template.parameterFormat as TemplateParameterFormat,
+
+          status: template.status as TemplateStatus,
+
+          components: template.components,
+          variables: template.variables,
+          createdBy: template.createdBy,
+          createdAt: template.createdAt,
+          updatedAt: template.updatedAt,
+        },
+      }
+    } catch (error: any) {
+       throw new InternalServerErrorException('Failed to fetch template');
+    }
+  }
+
+  async templateIdExists(id: string): Promise<boolean> {
+    try{
+        const template = await this.templateModel.exists({
+        _id: id,
+        status: TemplateStatus.APPROVED,
+        isDeleted: false,
+      });
+      return !!template;
+    }catch(error:any){
+      throw new InternalServerErrorException('Failed to check template existence');
+    }
+  }
+
   async getAllTemplates(
     query: GetAllTemplatesDto,
   ): Promise<GetAllTemplatesResponseDto> {

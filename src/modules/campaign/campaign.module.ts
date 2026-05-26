@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { CampaignController } from './campaign.controller';
+import { CampaignController } from './controller/campaign.controller';
 import { CampaignService } from './services/campaign.service';
 import { CampaignContactService } from './services/campaign-contact.service';
 import { CampaignSchedulerService } from './services/campaign-scheduler.service';
@@ -7,6 +7,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Campaign, CampaignSchema } from './schemas/campaign.schema';
 import { CampaignRun, CampaignRunSchema } from './schemas/campaign-run.schema';
 import { CampaignContact, CampaignContactSchema } from './schemas/campaign-contact.schema';
+import { TemplatesModule } from '../templates/templates.module';
+import { CampaignRunService } from './services/campaign-run.service';
+import { CampaignRunController } from './controller/campaign-run.controller';
+import { CampaignContactController } from './controller/campaign-contact.controller';
 
 @Module({
   imports: [
@@ -24,8 +28,9 @@ import { CampaignContact, CampaignContactSchema } from './schemas/campaign-conta
                 schema: CampaignContactSchema
               }
             ]),
+            TemplatesModule,
   ],
-  controllers: [CampaignController],
-  providers: [CampaignService,CampaignContactService,CampaignSchedulerService],
+  controllers: [CampaignController,CampaignRunController,CampaignContactController],
+  providers: [CampaignService,CampaignContactService,CampaignSchedulerService,CampaignRunService],
 })
 export class CampaignModule {}

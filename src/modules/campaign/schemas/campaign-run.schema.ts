@@ -1,5 +1,6 @@
 import { CampaignRunType } from '@common/enum/campaign-runtype.enum';
 import { CampaignContactStatus } from '@common/enum/campaigncontact-status.enum';
+import { CampaignRunStatus } from '@common/enum/campaignrun-status.enum';
 import {
   Prop,
   Schema,
@@ -48,8 +49,8 @@ export class CampaignRun {
    @Prop({
       required: true,
       trim: true,
-      enum:Object.values(CampaignContactStatus),
-      default: CampaignContactStatus.PENDING,
+      enum:Object.values(CampaignRunStatus),
+      default: CampaignRunStatus.DRAFT,
       index: true,
     })
     status!: string;
@@ -159,6 +160,18 @@ export class CampaignRun {
     },
   })
   deletedAt?: Date | null;
+
+  @Prop({
+    type: Date,
+    default: Date.now,
+  })
+  createdAt!: Date;
+
+  @Prop({
+    type: Date,
+    default: Date.now,
+  })
+  updatedAt!: Date;
 }
 
 export const CampaignRunSchema =

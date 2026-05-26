@@ -27,4 +27,9 @@ export class TemplatesController {
     async getAllTemplates(@Param() query: GetAllTemplatesDto): Promise<GetAllTemplatesResponseDto> {
         return await this.templatesService.getAllTemplates(query);
     }
+
+    @Get('/v1/:id')
+    async getTemplateById(@Param('id') id: string): Promise<SuccessResponseDto<TemplateResponseDto>> {
+        return await this.templatesService.getTemplateById(id);
+    }   
 }

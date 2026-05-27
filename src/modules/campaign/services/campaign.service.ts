@@ -6,7 +6,6 @@ import { CreateCampaignDto } from '../dto/CreateCampaignDto.dto';
 import { GetAllCampaignDto } from '../dto/GetAllCampaign.Dto.dto';
 import { GetCampaignByIdDto } from '../dto/GetCampaignByIdDto.dto';
 import { GetCampaignByIdResponseDto } from '../dto/GetCampaignByIdResponseDto.dto';
-import { Status } from '@common/enum/status.enum';
 
 @Injectable()
 export class CampaignService {

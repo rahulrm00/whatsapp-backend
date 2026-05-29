@@ -47,11 +47,12 @@ export class CampaignContact {
 
   // Snapshot Data
   @Prop({
-    required: true,
+    lowercase: true,
     trim: true,
+    default: '',
     maxlength: [100, 'Name too long'],
   })
-  name!: string;
+  name?: string;
 
   @Prop({
     required: true,
@@ -219,4 +220,7 @@ CampaignContactSchema.index(
 CampaignContactSchema.index({
   campaignId: 1,
   status: 1,
+});
+CampaignContactSchema.index({
+  wamid: 1,
 });

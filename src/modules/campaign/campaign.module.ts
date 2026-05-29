@@ -11,6 +11,7 @@ import { TemplatesModule } from '../templates/templates.module';
 import { CampaignRunService } from './services/campaign-run.service';
 import { CampaignRunController } from './controller/campaign-run.controller';
 import { CampaignContactController } from './controller/campaign-contact.controller';
+import { QueueModule } from '@modules/queue/queue.module';
 
 @Module({
   imports: [
@@ -28,7 +29,7 @@ import { CampaignContactController } from './controller/campaign-contact.control
                 schema: CampaignContactSchema
               }
             ]),
-            TemplatesModule,
+            TemplatesModule,QueueModule
   ],
   controllers: [CampaignController,CampaignRunController,CampaignContactController],
   providers: [CampaignService,CampaignContactService,CampaignSchedulerService,CampaignRunService],

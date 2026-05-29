@@ -6,4 +6,5 @@ export enum CampaignContactStatus {
   DELIVERED = 'DELIVERED',
   READ = 'READ',
   FAILED = 'FAILED',
+  DELETED = 'DELETED',
 }

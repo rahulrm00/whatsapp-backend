@@ -21,7 +21,6 @@ import { ActivesessionService } from './active-session.service';
 import { ActiveSession } from '../schemas/active-session.schema';
 import { IssueTokensAndCreateSessionResponseDto } from '../dto/IssueTokensAndCreateSessionResponseDto.dto';
 import { LoginResponseDto } from '../dto/LoginResponseDto.dto';
-import { lastValueFrom } from 'rxjs';
 import { GetTokenDto } from '../dto/GetTokenDto.dto';
 
 @Injectable()

@@ -158,7 +158,7 @@ export class TemplatesService {
     try{
         const template = await this.templateModel.exists({
         _id: id,
-        status: TemplateStatus.APPROVED,
+        status: TemplateStatus.PENDING,
         isDeleted: false,
       });
       return !!template;

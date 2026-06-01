@@ -18,7 +18,6 @@ export class User {
   @Prop({
     type: String,
     required: true,
-    unique: true,
     trim: true,
     uppercase: true,
   })
@@ -82,19 +81,6 @@ export const UserSchema =
  * UNIQUE INDEXES
  * ----------------------------------------
  */
-
-UserSchema.index(
-  {
-    userId: 1,
-  },
-  {
-    unique: true,
-    partialFilterExpression: {
-      isDeleted: false,
-    },
-  },
-);
-
 UserSchema.index(
   {
     email: 1,

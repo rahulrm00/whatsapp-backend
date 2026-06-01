@@ -3,6 +3,10 @@ export class CampaignRunResponseDto {
 
   campaignId!: string;
 
+  campaignName?: string;
+
+  templateName?: string;
+
   templateId!: string;
 
   runType!: string;

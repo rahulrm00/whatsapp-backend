@@ -10,6 +10,20 @@ export class WhatsappService {
   ) {
 
     try {
+        // TESTING ONLY
+      if (process.env.SIMULATE_META_DOWN === 'true') {
+        throw {
+          response: {
+            status: 503,
+            data: {
+              error: {
+                message: 'Meta API is temporarily unavailable',
+                code: 503,
+              },
+            },
+          },
+        };
+      }
 
       const response =
         await axios.post(

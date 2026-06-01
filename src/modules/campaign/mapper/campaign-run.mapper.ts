@@ -8,6 +8,7 @@ export class CampaignRunMapper {
     return {
       id: doc._id.toString(),
       campaignId: doc.campaignId.toString(),
+
       templateId: doc.templateId.toString(),
 
       runType: doc.runType,

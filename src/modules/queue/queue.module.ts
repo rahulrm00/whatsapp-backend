@@ -19,6 +19,8 @@ import {
 import { MongooseModule } from '@nestjs/mongoose';
 import { TemplatesModule } from '@modules/templates/templates.module';
 import { WhatsappModule } from '@modules/whatsapp/whatsapp.module';
+import { CampaignRecoveryService } from './services/campaign-recovery.service';
+import { RecoveryProcessor } from './processors/recovery.processor';
 
 @Module({
   imports: [
@@ -44,12 +46,16 @@ import { WhatsappModule } from '@modules/whatsapp/whatsapp.module';
 
     BullModule.registerQueue({
       name: 'campaign-queue',
-    }),
+    },
+    {
+      name: 'campaign-recovery-queue',
+    }
+  ),
     TemplatesModule,
     WhatsappModule,
   ],
   controllers: [QueueController],
-  providers: [CampaignQueueService, CampaignProcessor],
+  providers: [CampaignQueueService, CampaignProcessor,CampaignRecoveryService,RecoveryProcessor],
   exports: [CampaignQueueService],
 })
 export class QueueModule {}

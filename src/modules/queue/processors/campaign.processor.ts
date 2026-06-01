@@ -124,18 +124,60 @@ export class CampaignProcessor extends WorkerHost {
             console.log('SENT:', contact.phone);
           } catch (error: any) {
             if (this.isRetryableError(error)) {
-              console.log('RETRYABLE ERROR:', contact.phone);
+              const retryCount = (contact.retryCount || 0) + 1;
 
-              throw error;
+              const MAX_RETRIES = 5;
+
+              if (retryCount >= MAX_RETRIES) {
+                await this.campaignContactModel.findByIdAndUpdate(contact._id, {
+                  retryCount,
+
+                  status: CampaignContactStatus.FAILED,
+
+                  failedAt: new Date(),
+
+                  failureReason:
+                    error?.response?.data?.error?.message ||
+                    error?.message ||
+                    'Maximum retries exceeded',
+                });
+
+                await this.campaignRunModel.findByIdAndUpdate(campaignRunId, {
+                  $inc: {
+                    pendingCount: -1,
+                    failedCount: 1,
+                  },
+                });
+
+                continue;
+              }
+
+              await this.campaignContactModel.findByIdAndUpdate(contact._id, {
+                retryCount,
+
+                status: CampaignContactStatus.PENDING,
+
+                processingAt: null,
+
+                failureReason:
+                  error?.response?.data?.error?.message || error?.message,
+              });
+
+              console.warn(
+                `Retry ${retryCount}/${MAX_RETRIES} for ${contact.phone}`,
+              );
+
+              throw error; // Let BullMQ retry entire job
             }
 
+            // Permanent failure
             await this.campaignContactModel.findByIdAndUpdate(contact._id, {
               status: CampaignContactStatus.FAILED,
 
               failedAt: new Date(),
 
               failureReason:
-                error?.response?.data?.error?.message || error.message,
+                error?.response?.data?.error?.message || error?.message,
             });
 
             await this.campaignRunModel.findByIdAndUpdate(campaignRunId, {
@@ -164,9 +206,11 @@ export class CampaignProcessor extends WorkerHost {
     } catch (error) {
       console.error('JOB FAILED:', error);
 
-      await this.campaignRunModel.findByIdAndUpdate(campaignRunId, {
-        status: 'FAILED',
-      });
+      if (!this.isRetryableError(error)) {
+        await this.campaignRunModel.findByIdAndUpdate(campaignRunId, {
+          status: CampaignRunStatus.FAILED,
+        });
+      }
 
       throw error;
     }

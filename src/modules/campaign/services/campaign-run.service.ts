@@ -20,7 +20,10 @@ import { CampaignRunType } from '@common/enum/campaign-runtype.enum';
 import { CampaignRunStatus } from '@common/enum/campaignrun-status.enum';
 import { GetAllCampaignRunDto } from '../dto/GetAllCampaignRunDto.dto';
 import { GetAllCampaignRunResponseDto } from '../dto/GetAllCampaignRunResponseDto.dto';
-import { CampaignContact, CampaignContactDocument, CampaignContactSchema } from '../schemas/campaign-contact.schema';
+import {
+  CampaignContact,
+  CampaignContactDocument,
+} from '../schemas/campaign-contact.schema';
 import { CampaignQueueService } from '@modules/queue/services/campaign-queue.service';
 import { CampaignContactStatus } from '@common/enum/campaigncontact-status.enum';
 
@@ -35,7 +38,8 @@ export class CampaignRunService {
     private readonly campaignModel: Model<CampaignDocument>,
     private readonly templatesService: TemplatesService,
     private readonly campaignQueueService: CampaignQueueService,
-    @InjectModel(CampaignContact.name) private readonly campaignContactModel: Model<CampaignContactDocument>,
+    @InjectModel(CampaignContact.name)
+    private readonly campaignContactModel: Model<CampaignContactDocument>,
   ) {}
 
   async createCampaignRun(
@@ -76,204 +80,116 @@ export class CampaignRunService {
     }
   }
 
-async launchCampaignRun(
-  id: string,
-  data: UpdateCampaignRunDto,
-): Promise<CreateCampaignRunResponseDto> {
+  async launchCampaignRun(
+    id: string,
+    data: UpdateCampaignRunDto,
+  ): Promise<CreateCampaignRunResponseDto> {
+    // validate input
+    if (!id || !data.runType) {
+      throw new BadRequestException('Invalid campaign run ID or run type');
+    }
 
-  // validate input
-  if (!id || !data.runType) {
-
-    throw new BadRequestException(
-      'Invalid campaign run ID or run type',
-    );
-  }
-
-  // validate scheduled campaign
-  if (
-    data.runType ===
-      CampaignRunType.SCHEDULED
-    &&
-    !data.scheduledAt
-  ) {
-
-    throw new BadRequestException(
-      'scheduledAt is required for scheduled campaigns',
-    );
-  }
-
-  try {
-
-    // validate campaign run
-    const campaignRun =
-      await this.campaignRunModel
-        .findOne({
-
-          _id: id,
-
-          isDeleted: false,
-        });
-
-    if (!campaignRun) {
-
+    // validate scheduled campaign
+    if (data.runType === CampaignRunType.SCHEDULED && !data.scheduledAt) {
       throw new BadRequestException(
-        'Campaign run not found',
+        'scheduledAt is required for scheduled campaigns',
       );
     }
 
-    // allow only draft launch
-    if (
-      campaignRun.status !==
-      CampaignRunStatus.DRAFT
-    ) {
+    try {
+      // validate campaign run
+      const campaignRun = await this.campaignRunModel.findOne({
+        _id: id,
 
-      throw new BadRequestException(
-        'Campaign already launched',
-      );
-    }
+        isDeleted: false,
+      });
 
-    // validate contacts
-    const totalContacts =
-      await this.campaignContactModel
-        .countDocuments({
-
-          campaignRunId: id,
-
-          isDeleted: false,
-
-          status:
-            CampaignContactStatus.PENDING,
-        });
-
-    if (!totalContacts) {
-
-      throw new BadRequestException(
-        'No contacts found',
-      );
-    }
-
-    // determine status
-    const campaignStatus =
-
-      data.runType ===
-      CampaignRunType.SCHEDULED
-
-        ? CampaignRunStatus.SCHEDULED
-
-        : CampaignRunStatus.QUEUED;
-
-    // update campaign run
-    const updatedRun =
-      await this.campaignRunModel
-        .findByIdAndUpdate(
-
-          id,
-
-          {
-
-            runType:
-              data.runType,
-
-            scheduledAt:
-              data.scheduledAt || null,
-
-            status:
-              campaignStatus,
-          },
-
-          {
-            new: true,
-          },
-        );
-
-    if (!updatedRun) {
-
-      throw new InternalServerErrorException(
-        'Failed to update campaign run',
-      );
-    }
-
-    // SEND NOW
-    if (
-      data.runType ===
-      CampaignRunType.INSTANT
-    ) {
-
-      await this.campaignQueueService
-        .addCampaignJob(
-          id,
-        );
-
-      console.log(
-        'INSTANT JOB ADDED',
-      );
-    }
-
-    // SCHEDULE LATER
-    if (
-      data.runType ===
-      CampaignRunType.SCHEDULED
-    ) {
-
-      // validate future time
-      if (
-        new Date(
-          data.scheduledAt!,
-        ).getTime()
-        <=
-        Date.now()
-      ) {
-
-        throw new BadRequestException(
-          'Scheduled time must be future',
-        );
+      if (!campaignRun) {
+        throw new BadRequestException('Campaign run not found');
       }
 
-      const delay =
-  new Date(
-    data.scheduledAt!,
-  ).getTime() -
-  Date.now();
+      // allow only draft launch
+      if (campaignRun.status !== CampaignRunStatus.DRAFT) {
+        throw new BadRequestException('Campaign already launched');
+      }
 
-      await this.campaignQueueService
-        .addCampaignJob(
-          id,
-          delay,
-        );
+      // validate contacts
+      const totalContacts = await this.campaignContactModel.countDocuments({
+        campaignRunId: id,
 
-      console.log(
-        'SCHEDULED JOB ADDED',
+        isDeleted: false,
+
+        status: CampaignContactStatus.PENDING,
+      });
+
+      if (!totalContacts) {
+        throw new BadRequestException('No contacts found');
+      }
+
+      // determine status
+      const campaignStatus =
+        data.runType === CampaignRunType.SCHEDULED
+          ? CampaignRunStatus.SCHEDULED
+          : CampaignRunStatus.QUEUED;
+
+      // update campaign run
+      const updatedRun = await this.campaignRunModel.findByIdAndUpdate(
+        id,
+
+        {
+          runType: data.runType,
+
+          scheduledAt: data.scheduledAt || null,
+
+          status: campaignStatus,
+        },
+
+        {
+          new: true,
+        },
       );
+
+      if (!updatedRun) {
+        throw new InternalServerErrorException('Failed to update campaign run');
+      }
+
+      // SEND NOW
+      if (data.runType === CampaignRunType.INSTANT) {
+        await this.campaignQueueService.addCampaignJob(id);
+
+        console.log('INSTANT JOB ADDED');
+      }
+
+      // SCHEDULE LATER
+      if (data.runType === CampaignRunType.SCHEDULED) {
+        // validate future time
+        if (new Date(data.scheduledAt!).getTime() <= Date.now()) {
+          throw new BadRequestException('Scheduled time must be future');
+        }
+
+        const delay = new Date(data.scheduledAt!).getTime() - Date.now();
+
+        await this.campaignQueueService.addCampaignJob(id, delay);
+
+        console.log('SCHEDULED JOB ADDED');
+      }
+
+      return {
+        success: true,
+
+        message:
+          data.runType === CampaignRunType.SCHEDULED
+            ? 'Campaign scheduled successfully'
+            : 'Campaign queued successfully',
+
+        data: CampaignRunMapper.toResponse(updatedRun),
+      };
+    } catch (error: any) {
+      console.error(error);
+
+      throw new InternalServerErrorException(error.message);
     }
-
-    return {
-
-      success: true,
-
-      message:
-        data.runType ===
-        CampaignRunType.SCHEDULED
-
-          ? 'Campaign scheduled successfully'
-
-          : 'Campaign queued successfully',
-
-      data:
-        CampaignRunMapper
-          .toResponse(
-            updatedRun,
-          ),
-    };
-
-  } catch (error: any) {
-
-    console.error(error);
-
-    throw new InternalServerErrorException(
-      error.message,
-    );
   }
-}
 
   async getAllCampaignRuns(
     query: GetAllCampaignRunDto,
@@ -320,7 +236,11 @@ async launchCampaignRun(
 
         campaignId: run.campaignId?._id?.toString() ?? null,
 
+        campaignName: run.campaignId?.title ?? null,
+
         templateId: run.templateId?._id?.toString() ?? null,
+
+        templateName: run.templateId?.name ?? null,
 
         runType: run.runType,
 

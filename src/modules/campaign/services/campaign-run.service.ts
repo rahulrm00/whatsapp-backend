@@ -221,8 +221,14 @@ export class CampaignRunService {
       const [campaignRuns, total] = await Promise.all([
         this.campaignRunModel
           .find(filter)
-          .populate('campaignId')
-          .populate('templateId')
+          .populate({
+            path: 'campaignId',
+            select: 'title',
+          })
+          .populate({
+            path: 'templateId',
+            select: 'name',
+          })
           .sort({ createdAt: -1 })
           .skip(skip)
           .limit(limit)

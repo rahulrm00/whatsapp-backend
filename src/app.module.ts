@@ -13,6 +13,7 @@ import { WebhookModule } from './modules/webhook/webhook.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RedisModule } from './common/redis/redis.module';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [WhatsappModule ,
@@ -26,6 +27,17 @@ import { RedisModule } from './common/redis/redis.module';
         uri: configService.get<string>('MONGO_URI'),
       }),
     }),
+    
+ BullModule.forRootAsync({
+      inject: [ConfigService],
+
+      useFactory: (configService: ConfigService) => ({
+        connection: {
+          url: configService.get<string>('REDIS_URL'),
+        },
+      }),
+    }),
+
     AuthModule,
     UsersModule,
     ContactsModule,

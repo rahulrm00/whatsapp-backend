@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 
 import { BullModule } from '@nestjs/bullmq';
 
-import { ConfigService } from '@nestjs/config';
 
 import { CampaignQueueService } from './services/campaign-queue.service';
 
@@ -34,16 +33,6 @@ import { RecoveryProcessor } from './processors/recovery.processor';
         schema: CampaignRunSchema,
       },
     ]),
-    BullModule.forRootAsync({
-      inject: [ConfigService],
-
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          url: configService.get<string>('REDIS_URL'),
-        },
-      }),
-    }),
-
     BullModule.registerQueue({
       name: 'campaign-queue',
     },

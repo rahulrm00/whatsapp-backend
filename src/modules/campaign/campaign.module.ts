@@ -33,5 +33,6 @@ import { QueueModule } from '@modules/queue/queue.module';
   ],
   controllers: [CampaignController,CampaignRunController,CampaignContactController],
   providers: [CampaignService,CampaignContactService,CampaignSchedulerService,CampaignRunService],
+  exports: [CampaignContactService,CampaignRunService]
 })
 export class CampaignModule {}

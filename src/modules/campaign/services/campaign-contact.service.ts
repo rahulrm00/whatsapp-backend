@@ -306,4 +306,19 @@ export class CampaignContactService {
     }
   }
 
+  async findOneByWamid(wamid: string): Promise<CampaignContactDocument | null> {
+    return this.campaignContactModel.findOne({ wamid , isDeleted: false });
+  }
+
+  async updateStatus(contactId: string, updateData: any,): Promise<void> {
+    await this.campaignContactModel.updateOne(
+      {
+        _id: contactId,
+      },
+      {
+        $set: updateData,
+      },
+    );
+  }
+
 }

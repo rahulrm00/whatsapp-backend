@@ -6,6 +6,7 @@ import * as crypto from 'crypto';
 import { Request } from 'express';
 import { STATUS_RANK } from './constants/MetaMessageStatus.constants';
 import { CampaignContactService } from '@modules/campaign/services/campaign-contact.service';
+import { CampaignRunService } from '@modules/campaign/services/campaign-run.service';
 
 @Injectable()
 export class WebhookService {
@@ -14,7 +15,8 @@ export class WebhookService {
   constructor(
     @InjectQueue('meta-webhook')
     private readonly webhookQueue: Queue,
-    private readonly campaignContactService : CampaignContactService,
+    private readonly campaignContactService: CampaignContactService,
+    private readonly campaignRunService: CampaignRunService,
   ) {
     this.metaVerifyToken =
       process.env.META_VERIFY_TOKEN || 'default-verify-token';
@@ -30,37 +32,24 @@ export class WebhookService {
   }
 
   async receive(req: Request): Promise<void> {
-     const enabled =
-    process.env.WEBHOOK_SIGNATURE_ENABLED ===
-    'true';
+    const enabled = process.env.WEBHOOK_SIGNATURE_ENABLED === 'true';
 
-  if (enabled) {
+    if (enabled) {
+      const signature = req.headers['x-hub-signature-256'] as string;
 
-    const signature =
-      req.headers[
-        'x-hub-signature-256'
-      ] as string;
+      if (!signature) {
+        throw new UnauthorizedException('Missing signature');
+      }
 
-    if (!signature) {
-      throw new UnauthorizedException(
-        'Missing signature',
-      );
-    }
-
-    const valid =
-      this.verifySignature(
-        Buffer.from(
-          JSON.stringify(req.body),
-        ),
+      const valid = this.verifySignature(
+        Buffer.from(JSON.stringify(req.body)),
         signature,
       );
 
-    if (!valid) {
-      throw new UnauthorizedException(
-        'Invalid signature',
-      );
+      if (!valid) {
+        throw new UnauthorizedException('Invalid signature');
+      }
     }
-  }
     await this.webhookQueue.add('meta-webhook', req.body, {
       attempts: 5,
 
@@ -86,102 +75,102 @@ export class WebhookService {
     );
   }
 
-  private mapMetaStatus(
-  metaStatus: string,
-): CampaignContactStatus | null {
+  private mapMetaStatus(metaStatus: string): CampaignContactStatus | null {
+    switch (metaStatus?.toLowerCase()) {
+      case 'sent':
+        return CampaignContactStatus.SENT;
 
-  switch (
-    metaStatus?.toLowerCase()
-  ) {
-    case 'sent':
-      return CampaignContactStatus.SENT;
+      case 'delivered':
+        return CampaignContactStatus.DELIVERED;
 
-    case 'delivered':
-      return CampaignContactStatus.DELIVERED;
+      case 'read':
+        return CampaignContactStatus.READ;
 
-    case 'read':
-      return CampaignContactStatus.READ;
+      case 'failed':
+        return CampaignContactStatus.FAILED;
 
-    case 'failed':
-      return CampaignContactStatus.FAILED;
-
-    default:
-      return null;
+      default:
+        return null;
+    }
   }
-}
-  async handleStatusUpdate(
-  metaStatus: any,
-): Promise<void> {
+  async handleStatusUpdate(metaStatus: any): Promise<void> {
+    const wamid = metaStatus.id;
 
-  const wamid = metaStatus.id;
+    const newStatus = this.mapMetaStatus(metaStatus.status);
 
-  const newStatus =
-    this.mapMetaStatus(
-      metaStatus.status,
+    if (!newStatus) {
+      return;
+    }
+
+    const recipient = await this.campaignContactService.findOneByWamid(wamid);
+
+    if (!recipient) {
+      console.warn(`Recipient not found for ${wamid}`);
+      return;
+    }
+
+    const currentRank = STATUS_RANK[recipient.status] || 0;
+
+    const newRank = STATUS_RANK[newStatus] || 0;
+
+    if (currentRank >= newRank) {
+      return;
+    }
+
+    const updateData: any = {
+      status: newStatus,
+    };
+
+    switch (newStatus) {
+      case CampaignContactStatus.SENT:
+        updateData.sentAt = new Date();
+        break;
+
+      case CampaignContactStatus.DELIVERED:
+        updateData.deliveredAt = new Date();
+        break;
+
+      case CampaignContactStatus.READ:
+        updateData.readAt = new Date();
+        break;
+
+      case CampaignContactStatus.FAILED:
+        updateData.failedAt = new Date();
+
+        updateData.errorCode = metaStatus.errors?.[0]?.code;
+
+        updateData.errorMessage = metaStatus.errors?.[0]?.title;
+
+        break;
+    }
+    await this.campaignContactService.updateStatus(
+      recipient._id.toString(),
+      updateData,
     );
-
-  if (!newStatus) {
-    return;
+    await this.updateStats(recipient.campaignRunId.toString(), newStatus);
   }
+  
+  async updateStats(campaignRunId: string, status: CampaignContactStatus) {
+    const update: any = {};
 
-  const recipient =
-    await this.campaignContactService.findOneByWamid(wamid);
+    switch (status) {
+      case CampaignContactStatus.SENT:
+        update.sentCount = 1;
+        break;
 
-  if (!recipient) {
-    console.warn(
-      `Recipient not found for ${wamid}`,
-    );
-    return;
+      case CampaignContactStatus.DELIVERED:
+        update.deliveredCount = 1;
+        break;
+
+      case CampaignContactStatus.READ:
+        update.readCount = 1;
+        break;
+
+      case CampaignContactStatus.FAILED:
+        update.failedCount = 1;
+        break;
+    }
+
+    await this.campaignRunService.updateCampaignRunStats(campaignRunId, update);
   }
-
-  const currentRank =
-    STATUS_RANK[
-      recipient.status
-    ] || 0;
-
-  const newRank =
-    STATUS_RANK[
-      newStatus
-    ] || 0;
-
-  if (currentRank >= newRank) {
-    return;
-  }
-
-  const updateData: any = {
-    status: newStatus,
-  };
-
-  switch (newStatus) {
-    case CampaignContactStatus.SENT:
-      updateData.sentAt =
-        new Date();
-      break;
-
-    case CampaignContactStatus.DELIVERED:
-      updateData.deliveredAt =
-        new Date();
-      break;
-
-    case CampaignContactStatus.READ:
-      updateData.readAt =
-        new Date();
-      break;
-
-    case CampaignContactStatus.FAILED:
-      updateData.failedAt =
-        new Date();
-
-      updateData.errorCode =
-        metaStatus.errors?.[0]
-          ?.code;
-
-      updateData.errorMessage =
-        metaStatus.errors?.[0]
-          ?.title;
-
-      break;
-  }
-   await this.campaignContactService.updateStatus(recipient._id.toString(), updateData);  
-}
 }

@@ -26,6 +26,7 @@ import {
 } from '../schemas/campaign-contact.schema';
 import { CampaignQueueService } from '@modules/queue/services/campaign-queue.service';
 import { CampaignContactStatus } from '@common/enum/campaigncontact-status.enum';
+import { CampaignRunOverviewDto } from '../dto/CampaignRunOverviewDto.dto';
 
 @Injectable()
 export class CampaignRunService {
@@ -295,5 +296,254 @@ export class CampaignRunService {
 
       throw new InternalServerErrorException(error.message);
     }
+  }
+
+  async updateCampaignRunStats(campaignRunId: string, update: any) {
+    await this.campaignRunModel.updateOne(
+      {
+        _id: campaignRunId,
+      },
+      {
+        $inc: update,
+      },
+    );
+  }
+  async getOverview() {
+  
+    const [stats] = await this.campaignRunModel.aggregate([
+      {
+  $addFields: {
+    templateObjectId: {
+      $toObjectId: '$templateId',
+    },
+  },
+},
+{
+  $lookup: {
+    from: 'templates',
+    localField: 'templateObjectId',
+    foreignField: '_id',
+    as: 'template',
+  },
+},
+      {
+        $unwind: '$template',
+      },
+      {
+        $group: {
+          _id: null,
+
+          totalCampaigns: {
+            $sum: 1,
+          },
+
+          totalContacts: {
+            $sum: '$totalContacts',
+          },
+
+          pendingCount: {
+            $sum: '$pendingCount',
+          },
+
+          queuedCount: {
+            $sum: '$queuedCount',
+          },
+
+          sentCount: {
+            $sum: '$sentCount',
+          },
+
+          deliveredCount: {
+            $sum: '$deliveredCount',
+          },
+
+          readCount: {
+            $sum: '$readCount',
+          },
+
+          failedCount: {
+            $sum: '$failedCount',
+          },
+
+          draftCampaigns: {
+            $sum: {
+              $cond: [
+                {
+                  $eq: ['$status', 'DRAFT'],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          failedCampaigns: {
+            $sum: {
+              $cond: [
+                {
+                  $eq: ['$status', CampaignRunStatus.FAILED],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+
+          scheduledCampaigns: {
+            $sum: {
+              $cond: [
+                {
+                  $eq: ['$status', 'SCHEDULED'],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+
+          runningCampaigns: {
+            $sum: {
+              $cond: [
+                {
+                  $eq: ['$status', 'RUNNING'],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+
+          completedCampaigns: {
+            $sum: {
+              $cond: [
+                {
+                  $eq: ['$status', 'COMPLETED'],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+
+          utilityMessages: {
+            $sum: {
+              $cond: [
+                {
+                  $eq: ['$template.category', 'UTILITY'],
+                },
+                '$deliveredCount',
+                0,
+              ],
+            },
+          },
+
+          marketingMessages: {
+            $sum: {
+              $cond: [
+                {
+                  $eq: ['$template.category', 'MARKETING'],
+                },
+                '$deliveredCount',
+                0,
+              ],
+            },
+          },
+
+          authenticationMessages: {
+            $sum: {
+              $cond: [
+                {
+                  $eq: ['$template.category', 'AUTHENTICATION'],
+                },
+                '$deliveredCount',
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const utilityRate = 0.115;
+    const marketingRate = 0.8625;
+    const authenticationRate = 0.18;
+
+    const utilityAmount = stats.utilityMessages * utilityRate;
+
+    const marketingAmount = stats.marketingMessages * marketingRate;
+
+    const authenticationAmount =
+      stats.authenticationMessages * authenticationRate;
+
+    const deliveryRate =
+      stats.sentCount > 0
+        ? Number(((stats.deliveredCount / stats.sentCount) * 100).toFixed(2))
+        : 0;
+
+    const readRate =
+      stats.deliveredCount > 0
+        ? Number(((stats.readCount / stats.deliveredCount) * 100).toFixed(2))
+        : 0;
+
+    const failureRate =
+      stats.sentCount > 0
+        ? Number(((stats.failedCount / stats.sentCount) * 100).toFixed(2))
+        : 0;
+
+    return {
+      campaign: {
+        totalCampaigns: stats.totalCampaigns || 0,
+
+        activeCampaigns: stats.runningCampaigns || 0,
+
+        completedCampaigns: stats.completedCampaigns || 0,
+
+        failedCampaigns: stats.failedCampaigns || 0,
+        draftCampaigns: stats.draftCampaigns || 0,
+
+        scheduledCampaigns: stats.scheduledCampaigns || 0,
+
+        runningCampaigns: stats.runningCampaigns || 0,
+      },
+
+      contacts: {
+        totalContacts: stats.totalContacts,
+
+        pendingCount: stats.pendingCount,
+
+        queuedCount: stats.queuedCount,
+
+        sentCount: stats.sentCount,
+
+        deliveredCount: stats.deliveredCount,
+
+        readCount: stats.readCount,
+
+        failedCount: stats.failedCount,
+      },
+
+      rates: {
+        deliveryRate,
+        readRate,
+        failureRate,
+      },
+
+      billing: {
+        utilityMessages: stats.utilityMessages,
+
+        marketingMessages: stats.marketingMessages,
+
+        authenticationMessages: stats.authenticationMessages,
+
+        utilityAmount: Number(utilityAmount.toFixed(2)),
+
+        marketingAmount: Number(marketingAmount.toFixed(2)),
+
+        authenticationAmount: Number(authenticationAmount.toFixed(2)),
+
+        totalAmount: Number(
+          (utilityAmount + marketingAmount + authenticationAmount).toFixed(2),
+        ),
+      },
+    };
   }
 }

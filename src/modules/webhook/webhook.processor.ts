@@ -14,36 +14,77 @@ export class WebhookProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<any>): Promise<void> {
-    try {
-      const statuses =
-        job.data?.entry?.[0]?.changes?.[0]?.value?.statuses ?? [];
+ async process(
+  job: Job<any>,
+): Promise<void> {
+  try {
+    const change =
+      job.data?.entry?.[0]?.changes?.[0];
 
-      if (!statuses.length) {
-        this.logger.warn(
-          `No statuses found in webhook payload. JobId=${job.id}`,
+    if (!change) {
+      this.logger.warn(
+        `Invalid webhook payload. JobId=${job.id}`,
+      );
+      return;
+    }
+
+    const field = change.field;
+
+    switch (field) {
+      case 'messages': {
+        const statuses =
+          change.value?.statuses ?? [];
+
+        if (!statuses.length) {
+          this.logger.warn(
+            `No message statuses found. JobId=${job.id}`,
+          );
+          return;
+        }
+
+        this.logger.log(
+          `Processing ${statuses.length} message status update(s). JobId=${job.id}`,
         );
-        return;
+
+        await Promise.all(
+          statuses.map((status: any) =>
+            this.webhookService.handleStatusUpdate(
+              status,
+            ),
+          ),
+        );
+
+        break;
       }
 
-      this.logger.log(
-        `Processing ${statuses.length} status update(s). JobId=${job.id}`,
-      );
+      case 'message_template_status_update': {
+        this.logger.log(
+          `Processing template status update. JobId=${job.id}`,
+        );
 
-      await Promise.all(
-        statuses.map((status) =>
-          this.webhookService.handleStatusUpdate(status),
-        ),
-      );
+        await this.webhookService.handleTemplateStatusUpdate(
+          change.value,
+        );
 
-      this.logger.log(`Webhook processing completed. JobId=${job.id}`);
-    } catch (error: any) {
-      this.logger.error(
-        `Webhook processing failed. JobId=${job.id}`,
-        error?.stack,
-      );
+        break;
+      }
 
-      throw error;
+      default:
+        this.logger.warn(
+          `Unsupported webhook field: ${field}. JobId=${job.id}`,
+        );
     }
+
+    this.logger.log(
+      `Webhook processing completed. JobId=${job.id}`,
+    );
+  } catch (error: any) {
+    this.logger.error(
+      `Webhook processing failed. JobId=${job.id}`,
+      error?.stack,
+    );
+
+    throw error;
   }
+}
 }

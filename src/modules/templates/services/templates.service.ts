@@ -158,12 +158,40 @@ export class TemplatesService {
     try{
         const template = await this.templateModel.exists({
         _id: id,
-        status: TemplateStatus.PENDING,
+        status: TemplateStatus.APPROVED,
         isDeleted: false,
       });
       return !!template;
     }catch(error:any){
       throw new InternalServerErrorException('Failed to check template existence');
+    }
+  }
+   
+  async updateTemplateStatus(id: string, status: string, rejectionReason = ''): Promise<void> {
+    try{
+       await this.templateModel.updateOne(
+        {
+          _id: id,},
+        {
+          $set: {
+            status,
+            rejectionReason,
+            syncedAt: new Date(),
+          },
+        }
+      );
+    }catch(error:any){
+      throw new InternalServerErrorException('Failed to update template status');
+    }
+  }
+  async templateGetByMetaId(metaTemplateId: string): Promise<TemplateDocument | null> {
+    try{
+      return await this.templateModel.findOne({
+        metaTemplateId,
+        isDeleted: false,
+      });
+    }catch(error:any){
+      throw new InternalServerErrorException('Failed to fetch template by meta ID');
     }
   }
 

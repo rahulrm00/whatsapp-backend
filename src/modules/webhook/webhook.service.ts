@@ -1,15 +1,17 @@
 import { CampaignContactStatus } from '@common/enum/campaigncontact-status.enum';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import * as crypto from 'crypto';
 import { Request } from 'express';
 import { STATUS_RANK } from './constants/MetaMessageStatus.constants';
 import { CampaignContactService } from '@modules/campaign/services/campaign-contact.service';
 import { CampaignRunService } from '@modules/campaign/services/campaign-run.service';
+import { TemplatesService } from '@modules/templates/services/templates.service';
 
 @Injectable()
 export class WebhookService {
+  private readonly logger = new Logger(WebhookService.name);
   private readonly metaVerifyToken: string;
   private readonly appSecret: string;
   constructor(
@@ -17,6 +19,7 @@ export class WebhookService {
     private readonly webhookQueue: Queue,
     private readonly campaignContactService: CampaignContactService,
     private readonly campaignRunService: CampaignRunService,
+    private readonly templateService: TemplatesService,
   ) {
     this.metaVerifyToken =
       process.env.META_VERIFY_TOKEN || 'default-verify-token';
@@ -93,6 +96,37 @@ export class WebhookService {
         return null;
     }
   }
+  async handleTemplateStatusUpdate(
+  payload: any,
+): Promise<void> {
+  this.logger.log(
+    `Template Status Update: ${payload.event}`,
+  );
+
+  const template =
+    await this.templateService.templateGetByMetaId(
+      payload.message_template_id
+    );
+
+  if (!template) {
+    this.logger.warn(
+      `Template not found: ${payload.message_template_id}`,
+    );
+    return;
+  }
+
+  await this.templateService.updateTemplateStatus(
+    template._id.toString(),
+    payload.event,
+    payload.reason,
+  );
+  this.logger.log(
+    `Template updated successfully: ${template.name}`,
+  );
+}
+
+
+
   async handleStatusUpdate(metaStatus: any): Promise<void> {
     const wamid = metaStatus.id;
 
@@ -149,7 +183,7 @@ export class WebhookService {
     );
     await this.updateStats(recipient.campaignRunId.toString(), newStatus);
   }
-  
+
   async updateStats(campaignRunId: string, status: CampaignContactStatus) {
     const update: any = {};
 

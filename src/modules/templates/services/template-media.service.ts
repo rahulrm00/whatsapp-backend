@@ -21,7 +21,7 @@ export class TemplateMediaService {
       (this.accessToken = process.env.META_API_TOKEN || ''),
       (this.metaApiBaseUrl = process.env.META_API_BASE_URL || ''));
   }
-  async uploadMedia(file: Express.Multer.File) {
+  async uploadMedia(file: Express.Multer.File)  {
     if (!file) {
       throw new BadRequestException('File required');
     }
@@ -40,7 +40,13 @@ export class TemplateMediaService {
       headerHandle,
     });
 
-    return media;
+    return {
+  id: media._id,
+  fileName: media.fileName,
+  mimeType: media.mimeType,
+  mediaType: media.mediaType,
+  fileSize: media.fileSize,
+};
   }
   private async uploadToMeta(file: Express.Multer.File): Promise<string> {
     const session = await axios.post(

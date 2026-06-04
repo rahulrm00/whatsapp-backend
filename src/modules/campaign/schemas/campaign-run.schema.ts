@@ -39,6 +39,13 @@ export class CampaignRun {
   templateId!: Types.ObjectId;
 
   @Prop({
+  type: Types.ObjectId,
+  ref: 'MetaMedia',
+  default: null,
+})
+mediaId?: Types.ObjectId;
+
+  @Prop({
     required: true,
     trim: true,
     enum: Object.values(CampaignRunType),

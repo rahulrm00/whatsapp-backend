@@ -5,7 +5,7 @@ import { TemplateStatus } from '@common/enum/template-status.enum';
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 
 export type TemplateDocument = HydratedDocument<Template>;
 
@@ -51,6 +51,13 @@ export class Template {
     index: true,
   })
   category!: string;
+
+  @Prop({
+  type: Types.ObjectId,
+  ref: 'TemplateMedia',
+  default: null,
+})
+mediaId?: Types.ObjectId;
 
   @Prop({
     type: String,

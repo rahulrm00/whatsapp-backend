@@ -29,6 +29,7 @@ export class TemplateResponseDto {
   components!: Record<string, any>[];
 
   variables!: string[];
+  mediaId?: string | null;
 
   createdBy!: string;
 

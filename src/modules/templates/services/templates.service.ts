@@ -64,6 +64,7 @@ export class TemplatesService {
         parameterFormat: data.parameterFormat,
 
         components: data.components,
+          mediaId: data.mediaId || null,
 
         variables: data.variables || [],
 
@@ -96,6 +97,7 @@ export class TemplatesService {
 
           components: template.components,
           variables: template.variables,
+          mediaId: template.mediaId ? template.mediaId.toString() : null,
           createdBy: template.createdBy,
           createdAt: template.createdAt,
           updatedAt: template.updatedAt,
@@ -141,7 +143,7 @@ export class TemplatesService {
           parameterFormat: template.parameterFormat as TemplateParameterFormat,
 
           status: template.status as TemplateStatus,
-
+           mediaId: template.mediaId ? template.mediaId.toString() : null,
           components: template.components,
           variables: template.variables,
           createdBy: template.createdBy,
@@ -277,6 +279,8 @@ export class TemplatesService {
         status: template.status as TemplateStatus,
 
         components: template.components,
+
+        mediaId: template.mediaId ? template.mediaId.toString() : null,
 
         variables: template.variables,
 

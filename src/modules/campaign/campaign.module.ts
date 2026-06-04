@@ -12,6 +12,8 @@ import { CampaignRunService } from './services/campaign-run.service';
 import { CampaignRunController } from './controller/campaign-run.controller';
 import { CampaignContactController } from './controller/campaign-contact.controller';
 import { QueueModule } from '@modules/queue/queue.module';
+import { CampaignMetaMedia, CampaignMetaMediaSchema } from './schemas/campaignmeta-media.schema';
+import { CampaignMediaService } from './services/campaign-media.service';
 
 @Module({
   imports: [
@@ -27,12 +29,16 @@ import { QueueModule } from '@modules/queue/queue.module';
               {
                 name: CampaignContact.name,
                 schema: CampaignContactSchema
+              },
+              {
+                name: CampaignMetaMedia.name,
+                schema: CampaignMetaMediaSchema
               }
             ]),
             TemplatesModule,QueueModule
   ],
-  controllers: [CampaignController,CampaignRunController,CampaignContactController],
-  providers: [CampaignService,CampaignContactService,CampaignSchedulerService,CampaignRunService],
-  exports: [CampaignContactService,CampaignRunService]
+  controllers: [CampaignController,CampaignRunController,CampaignContactController,],
+  providers: [CampaignService,CampaignContactService,CampaignSchedulerService,CampaignRunService,CampaignMediaService],
+  exports: [CampaignContactService,CampaignRunService,CampaignMediaService],
 })
 export class CampaignModule {}

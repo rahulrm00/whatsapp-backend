@@ -13,65 +13,73 @@ export class MetaTemplateBuilder {
     for (const component of template.components) {
 
       // HEADER
-      if (
-        component.type === 'HEADER'
-      ) {
+     if (component.type === 'HEADER') {
 
-        if (
-          component.format === 'TEXT'
-        ) {
+  // TEXT HEADER
+  if (component.format === 'TEXT') {
 
-          const parameters =
-            this.extractVariables(
-              component.text,
-              customFields,
-            );
+    const parameters =
+      this.extractVariables(
+        component.text,
+        customFields,
+      );
 
-          if (parameters.length) {
+    if (parameters.length) {
+      components.push({
+        type: 'header',
+        parameters,
+      });
+    }
+  }
 
-            components.push({
-              type: 'header',
-              parameters,
-            });
-          }
-        }
+  // IMAGE HEADER
+  if (component.format === 'IMAGE') {
 
-        if (
-          component.format === 'IMAGE'
-        ) {
+    components.push({
+      type: 'header',
+      parameters: [
+        {
+          type: 'image',
+          image: {
+            id: customFields.metaMediaId,
+          },
+        },
+      ],
+    });
+  }
 
-          components.push({
-            type: 'header',
-            parameters: [
-              {
-                type: 'image',
-                image: {
-                  link:
-                    customFields.imageUrl,
-                },
-              },
-            ],
-          });
-        }
+  // VIDEO HEADER
+  if (component.format === 'VIDEO') {
 
-        if (
-          component.format === 'DOCUMENT'
-        ) {
+    components.push({
+      type: 'header',
+      parameters: [
+        {
+          type: 'video',
+          video: {
+            id: customFields.metaMediaId,
+          },
+        },
+      ],
+    });
+  }
 
-          components.push({
-            type: 'header',
-            parameters: [
-              {
-                type: 'document',
-                document: {
-                  link:
-                    customFields.documentUrl,
-                },
-              },
-            ],
-          });
-        }
-      }
+  // DOCUMENT HEADER
+  if (component.format === 'DOCUMENT') {
+
+    components.push({
+      type: 'header',
+      parameters: [
+        {
+          type: 'document',
+          document: {
+            id: customFields.metaMediaId,
+          },
+        },
+      ],
+    });
+  }
+}
 
       // BODY
       if (

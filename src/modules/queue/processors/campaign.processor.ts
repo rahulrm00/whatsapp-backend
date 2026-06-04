@@ -21,6 +21,7 @@ import { TemplatesService } from '@modules/templates/services/templates.service'
 import { WhatsappService } from '@modules/whatsapp/whatsapp.service';
 import { MetaTemplateBuilder } from '@modules/whatsapp/builders/MetaTemplateBuilder.builder';
 import { CampaignRunStatus } from '@common/enum/campaignrun-status.enum';
+import { CampaignMetaMedia, CampaignMetaMediaDocument } from '@modules/campaign/schemas/campaignmeta-media.schema';
 
 @Processor('campaign-queue')
 export class CampaignProcessor extends WorkerHost {
@@ -30,6 +31,8 @@ export class CampaignProcessor extends WorkerHost {
 
     @InjectModel(CampaignRun.name)
     private readonly campaignRunModel: Model<CampaignRunDocument>,
+
+    @InjectModel(CampaignMetaMedia.name) private readonly campaignMetaMediaModel: Model<CampaignMetaMediaDocument>,
 
     private readonly templatesService: TemplatesService,
     private readonly metaTemplateBuilder: MetaTemplateBuilder,
@@ -94,9 +97,25 @@ export class CampaignProcessor extends WorkerHost {
               processingAt: new Date(),
             });
 
+            let metaMediaId: string | null = null;
+
+            if (campaignRun.mediaId) {
+              const media = await this.campaignMetaMediaModel.findById(
+                campaignRun.mediaId,
+              );
+
+              metaMediaId = media?.metaMediaId ?? null;
+            }
+
+            const customFields = contact.customFields || {};
+
+            if (campaignRun.mediaId) {
+              customFields.metaMediaId = metaMediaId;
+            }
+
             const payload = this.metaTemplateBuilder.build(
               template.data,
-              contact.customFields || {},
+              customFields,
             );
 
             const response = await this.whatsappService.sendTemplate(

@@ -102,5 +102,9 @@ export class CreateTemplateDto {
 
   @IsOptional()
   @IsString()
+  mediaId?: string;
+
+  @IsOptional()
+  @IsString()
   createdBy?: string;
 }

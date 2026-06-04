@@ -20,6 +20,7 @@ import { TemplatesModule } from '@modules/templates/templates.module';
 import { WhatsappModule } from '@modules/whatsapp/whatsapp.module';
 import { CampaignRecoveryService } from './services/campaign-recovery.service';
 import { RecoveryProcessor } from './processors/recovery.processor';
+import { CampaignMetaMedia, CampaignMetaMediaSchema } from '@modules/campaign/schemas/campaignmeta-media.schema';
 
 @Module({
   imports: [
@@ -32,6 +33,10 @@ import { RecoveryProcessor } from './processors/recovery.processor';
         name: CampaignRun.name,
         schema: CampaignRunSchema,
       },
+      {
+        name:CampaignMetaMedia.name,
+        schema: CampaignMetaMediaSchema,
+      }
     ]),
     BullModule.registerQueue({
       name: 'campaign-queue',

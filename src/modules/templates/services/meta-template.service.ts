@@ -3,7 +3,11 @@ import {
   HttpStatus,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { TemplateMedia, TemplateMediaDocument } from '../schemas/templatemedia.schema';
 
 export interface CreateMetaTemplatePayload {
   name: string;
@@ -11,10 +15,16 @@ export interface CreateMetaTemplatePayload {
   language: string;
   parameterFormat: string;
   components: any[];
+  mediaId?: string;
 }
 
 @Injectable()
 export class MetaTemplateService {
+
+  constructor(
+    @InjectModel(TemplateMedia.name)
+    private readonly templateMediaModel: Model<TemplateMediaDocument>,
+  ){}
   private readonly logger =
     new Logger(MetaTemplateService.name);
 
@@ -45,6 +55,30 @@ export class MetaTemplateService {
     dto: CreateMetaTemplatePayload,
   ) {
     try {
+
+
+       let media = null;
+
+  if (dto.mediaId) {
+
+    media =
+      await this.templateMediaModel.findById(
+        dto.mediaId,
+      );
+
+    if (!media) {
+      throw new NotFoundException(
+        'Template media not found',
+      );
+    }
+  }
+
+  const components =
+    this.buildMetaComponents(
+      dto.components,
+      media,
+    );
+
       const payload = {
         name: dto.name,
         category: dto.category,
@@ -53,7 +87,7 @@ export class MetaTemplateService {
         parameter_format:
           dto.parameterFormat.toLowerCase(),
 
-        components: dto.components,
+        components: components,
       };
 
       this.logger.log(
@@ -120,6 +154,42 @@ export class MetaTemplateService {
       );
     }
   }
+
+  private buildMetaComponents(
+  components: any[],
+  media?: any,
+) {
+
+  return components.map(
+    (component) => {
+
+      const isMediaHeader =
+        component.type === 'HEADER' &&
+        ['IMAGE', 'VIDEO', 'DOCUMENT']
+          .includes(component.format);
+
+      if (
+        isMediaHeader &&
+        media
+      ) {
+
+        return {
+          type: 'HEADER',
+          format:
+            component.format,
+
+          example: {
+            header_handle: [
+              media.headerHandle,
+            ],
+          },
+        };
+      }
+
+      return component;
+    },
+  );
+}
 
   // =========================
   // DELETE TEMPLATE

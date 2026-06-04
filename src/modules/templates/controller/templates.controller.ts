@@ -1,13 +1,13 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { MetaTemplateService } from './services/meta-template.service';
-import { TemplateSyncService } from './services/template-sync.service';
-import { TemplateValidatorService } from './services/template-validation.service';
-import { TemplatesService } from './services/templates.service';
-import { CreateTemplateDto } from './dto/create-template.dto';
-import { TemplateResponseDto } from './dto/template-response.dto';
-import { SuccessResponseDto } from './dto/success-response.dto';
-import { GetAllTemplatesDto } from './dto/get-all-templates.dto';
-import { GetAllTemplatesResponseDto } from './dto/get-all-template-response.dto';
+import { MetaTemplateService } from '../services/meta-template.service';
+import { TemplateSyncService } from '../services/template-sync.service';
+import { TemplateValidatorService } from '../services/template-validation.service';
+import { TemplatesService } from '../services/templates.service';
+import { CreateTemplateDto } from '../dto/create-template.dto';
+import { TemplateResponseDto } from '../dto/template-response.dto';
+import { SuccessResponseDto } from '../dto/success-response.dto';
+import { GetAllTemplatesDto } from '../dto/get-all-templates.dto';
+import { GetAllTemplatesResponseDto } from '../dto/get-all-template-response.dto';
 
 @Controller('templates')
 export class TemplatesController {

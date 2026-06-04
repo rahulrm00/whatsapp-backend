@@ -143,6 +143,18 @@ export class TemplateValidatorService {
         component.text.match(
           /{{(.*?)}}/g,
         ) || [];
+        if (matches.length === 0) {
+  continue;
+}
+
+        if (
+  matches.length > 0 &&
+  !parameterFormat
+) {
+  throw new BadRequestException(
+    'parameterFormat is required when variables are used',
+  );
+}
 
       // POSITIONAL
 

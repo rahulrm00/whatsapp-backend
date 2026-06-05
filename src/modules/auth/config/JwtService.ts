@@ -26,6 +26,34 @@ export class JwtService {
   claims: Record<string, any>,
   opts: { sub: string; aud: string; ttlSec: number; deviceId?: string }
    ) {
+      console.log('========================');
+  console.log('PRIVATE KEY DEBUG');
+  console.log('========================');
+
+  console.log(
+    'STARTS WITH:',
+    this.privateKeyPem.startsWith('-----BEGIN PRIVATE KEY-----')
+  );
+
+  console.log(
+    'ENDS WITH:',
+    this.privateKeyPem.endsWith('-----END PRIVATE KEY-----')
+  );
+
+  console.log(
+    'LENGTH:',
+    this.privateKeyPem.length
+  );
+
+  console.log(
+    'FIRST 100:',
+    JSON.stringify(this.privateKeyPem.substring(0, 100))
+  );
+
+  console.log(
+    'LAST 100:',
+    JSON.stringify(this.privateKeyPem.slice(-100))
+  );
   const pk = await importPKCS8(this.privateKeyPem, this.alg);
   const now = Math.floor(Date.now() / 1000);
   const jti = randomUUID();

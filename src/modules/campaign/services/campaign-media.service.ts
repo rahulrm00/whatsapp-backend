@@ -5,7 +5,10 @@ import { UploadMediaDto } from '../dto/UploadMediaDto.dto';
 import { UploadMediaResponseDto } from '../dto/UploadMediaResponseDto.dto';
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Connection } from 'mongoose';
-import { CampaignMetaMedia, CampaignMetaMediaDocument } from '../schemas/campaignmeta-media.schema';
+import {
+  CampaignMetaMedia,
+  CampaignMetaMediaDocument,
+} from '../schemas/campaignmeta-media.schema';
 import {
   CampaignRun,
   CampaignRunDocument,
@@ -60,6 +63,12 @@ export class CampaignMediaService {
         ],
         { session },
       );
+
+      const campaignRun = await this.campaignRunModel.findById(campaignRunId).session(session);
+
+      if (!campaignRun) {
+        throw new BadRequestException('Campaign run not found');
+      }
 
       await this.campaignRunModel.findByIdAndUpdate(
         campaignRunId,
@@ -120,5 +129,59 @@ export class CampaignMediaService {
     );
 
     return response.data.id;
+  }
+
+  async deleteMedia(campaignRunId: string, mediaId: string): Promise<String> {
+    const session = await this.connection.startSession();
+    try {
+      session.startTransaction();
+      const campaignRun = await this.campaignRunModel
+        .findById(campaignRunId)
+        .session(session);
+      if (!campaignRun) {
+        throw new BadRequestException('Campaign run not found');
+      }
+      if (campaignRun.mediaId?.toString() !== mediaId) {
+        throw new BadRequestException(
+          'Media not associated with this campaign run',
+        );
+      }
+      if (campaignRun.mediaId === null) {
+        throw new BadRequestException(
+          'No media associated with this campaign run',
+        );
+      }
+      await this.campaignRunModel
+        .findByIdAndUpdate(campaignRunId, { mediaId: null })
+        .session(session);
+      const media = await this.campaignMetaMediaModel
+        .findById(mediaId)
+        .session(session);
+      if (!media) {
+        throw new BadRequestException('Media not found');
+      }
+      await this.campaignMetaMediaModel
+        .findByIdAndDelete(mediaId)
+        .session(session);
+      await this.deleteFromMeta(media.metaMediaId);
+      await session.commitTransaction();        
+      return 'Media deleted successfully';
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  private async deleteFromMeta(metaMediaId: string): Promise<void> {
+    await axios.delete(
+      `${this.metaApiBaseUrl}/${metaMediaId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+        },
+      },
+    ); 
   }
 }

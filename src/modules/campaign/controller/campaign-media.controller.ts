@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Param,
   Post,
   UploadedFile,
@@ -28,4 +29,12 @@ export class CampaignMediaController {
   ) {
     return this.campaignMediaService.uploadMedia(campaignRunId, file, dto);
   }
+
+  @Delete('v1/:campaignRunId/:mediaId')
+  async deleteMedia(
+    @Param('campaignRunId') campaignRunId: string,
+    @Param('mediaId') mediaId: string,
+  ) {
+    return this.campaignMediaService.deleteMedia(campaignRunId, mediaId);
+  } 
 }

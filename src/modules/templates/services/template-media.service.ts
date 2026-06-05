@@ -1,10 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import {
   TemplateMedia,
   TemplateMediaDocument,
 } from '../schemas/templatemedia.schema';
-import { Model } from 'mongoose';
+import { Connection, Model } from 'mongoose';
 import axios from 'axios';
 import { MediaType } from '@common/enum/meta-media.enum';
 
@@ -16,6 +16,7 @@ export class TemplateMediaService {
   constructor(
     @InjectModel(TemplateMedia.name)
     private readonly templateMediaModel: Model<TemplateMediaDocument>,
+    @InjectConnection() private readonly connection: Connection,
   ) {
     ((this.metaApiId = process.env.META_APP_ID || ''),
       (this.accessToken = process.env.META_API_TOKEN || ''),
@@ -89,5 +90,18 @@ export class TemplateMediaService {
       }
   
       return MediaType.DOCUMENT;
+    }
+
+    async deleteMedia(id :string):Promise<string>{
+      try{
+         const templateMedia = await this.templateMediaModel.findById(id);
+         if(!templateMedia){
+          throw new NotFoundException("Tmeplate Media not found");
+         } 
+         await this.templateMediaModel.findByIdAndDelete(id);
+         return "Template Media Delete Succesfully"
+      }catch(error:any){
+       throw new InternalServerErrorException("Template Media not deleted");
+      }
     }
 }

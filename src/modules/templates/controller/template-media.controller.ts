@@ -1,4 +1,4 @@
-import { Controller, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Controller, Delete, Param, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { TemplateMediaService } from "../services/template-media.service";
 import { FileInterceptor } from "@nestjs/platform-express";
 
@@ -12,5 +12,10 @@ export class TemplateMediaController{
     @UseInterceptors(FileInterceptor('file'))
     async uploadMedia(@UploadedFile() file: Express.Multer.File) {
         return this.templateMediaService.uploadMedia(file);
+    }
+
+    @Delete('v1/:id')
+    async deleteMedia(@Param('id') id :string){
+        return this.templateMediaService.deleteMedia(id);
     }
 } 

@@ -1,15 +1,13 @@
-
-import {
-  IsEnum,
-  IsNumberString,
-  IsOptional,
-  IsString,
-} from 'class-validator';
-
-import { Transform } from 'class-transformer';
-
 import { TemplateCategory } from '@common/enum/template-category.enum';
 import { TemplateStatus } from '@common/enum/template-status.enum';
+import { Type } from 'class-transformer';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class GetAllTemplatesDto {
   @IsOptional()
@@ -29,12 +27,14 @@ export class GetAllTemplatesDto {
   search?: string;
 
   @IsOptional()
-  @Transform(({ value }) => Number(value))
-  @IsNumberString()
-  page?: number = 1;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page: number = 1;
 
   @IsOptional()
-  @Transform(({ value }) => Number(value))
-  @IsNumberString()
-  limit?: number = 10;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit: number = 10;
 }

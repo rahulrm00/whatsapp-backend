@@ -64,7 +64,7 @@ export class TemplatesService {
         parameterFormat: data.parameterFormat,
 
         components: data.components,
-          mediaId: data.mediaId || null,
+        mediaId: data.mediaId || null,
 
         variables: data.variables || [],
 
@@ -114,15 +114,19 @@ export class TemplatesService {
     }
   }
 
-  async getTemplateById(id: string): Promise<SuccessResponseDto<TemplateResponseDto>> {
+  async getTemplateById(
+    id: string,
+  ): Promise<SuccessResponseDto<TemplateResponseDto>> {
     if (!id) {
       throw new BadRequestException('Template ID is required');
     }
-    try{
-       const template = await this.templateModel.findOne({
-        _id: id,
-        isDeleted: false,
-      }).lean();
+    try {
+      const template = await this.templateModel
+        .findOne({
+          _id: id,
+          isDeleted: false,
+        })
+        .lean();
       if (!template) {
         throw new BadRequestException('Template not found');
       }
@@ -143,57 +147,70 @@ export class TemplatesService {
           parameterFormat: template.parameterFormat as TemplateParameterFormat,
 
           status: template.status as TemplateStatus,
-           mediaId: template.mediaId ? template.mediaId.toString() : null,
+          mediaId: template.mediaId ? template.mediaId.toString() : null,
           components: template.components,
           variables: template.variables,
           createdBy: template.createdBy,
           createdAt: template.createdAt,
           updatedAt: template.updatedAt,
         },
-      }
+      };
     } catch (error: any) {
-       throw new InternalServerErrorException('Failed to fetch template');
+      throw new InternalServerErrorException('Failed to fetch template');
     }
   }
 
   async templateIdExists(id: string): Promise<boolean> {
-    try{
-        const template = await this.templateModel.exists({
+    try {
+      const template = await this.templateModel.exists({
         _id: id,
         status: TemplateStatus.APPROVED,
         isDeleted: false,
       });
       return !!template;
-    }catch(error:any){
-      throw new InternalServerErrorException('Failed to check template existence');
+    } catch (error: any) {
+      throw new InternalServerErrorException(
+        'Failed to check template existence',
+      );
     }
   }
-   
-  async updateTemplateStatus(id: string, status: string, rejectionReason = ''): Promise<void> {
-    try{
-       await this.templateModel.updateOne(
+
+  async updateTemplateStatus(
+    id: string,
+    status: string,
+    rejectionReason = '',
+  ): Promise<void> {
+    try {
+      await this.templateModel.updateOne(
         {
-          _id: id,},
+          _id: id,
+        },
         {
           $set: {
             status,
             rejectionReason,
             syncedAt: new Date(),
           },
-        }
+        },
       );
-    }catch(error:any){
-      throw new InternalServerErrorException('Failed to update template status');
+    } catch (error: any) {
+      throw new InternalServerErrorException(
+        'Failed to update template status',
+      );
     }
   }
-  async templateGetByMetaId(metaTemplateId: string): Promise<TemplateDocument | null> {
-    try{
+  async templateGetByMetaId(
+    metaTemplateId: string,
+  ): Promise<TemplateDocument | null> {
+    try {
       return await this.templateModel.findOne({
         metaTemplateId,
         isDeleted: false,
       });
-    }catch(error:any){
-      throw new InternalServerErrorException('Failed to fetch template by meta ID');
+    } catch (error: any) {
+      throw new InternalServerErrorException(
+        'Failed to fetch template by meta ID',
+      );
     }
   }
 
@@ -241,6 +258,7 @@ export class TemplatesService {
     ]);
 
     const totalPages = Math.ceil(total / limit);
+  
 
     return {
       success: true,

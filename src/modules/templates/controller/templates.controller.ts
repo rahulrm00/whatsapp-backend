@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { MetaTemplateService } from '../services/meta-template.service';
 import { TemplateSyncService } from '../services/template-sync.service';
 import { TemplateValidatorService } from '../services/template-validation.service';
@@ -24,7 +24,7 @@ export class TemplatesController {
     }
     
     @Get('/v1/getall')
-    async getAllTemplates(@Param() query: GetAllTemplatesDto): Promise<GetAllTemplatesResponseDto> {
+    async getAllTemplates( @Query() query: GetAllTemplatesDto,): Promise<GetAllTemplatesResponseDto> {
         return await this.templatesService.getAllTemplates(query);
     }
 

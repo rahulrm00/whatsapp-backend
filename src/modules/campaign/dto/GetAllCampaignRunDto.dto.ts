@@ -1,23 +1,26 @@
+import { Type } from 'class-transformer';
 import {
   IsEnum,
-  IsNumberString,
+  IsInt,
   IsOptional,
   IsString,
+  Min,
 } from 'class-validator';
 
-import { Transform } from 'class-transformer';
 import { CampaignRunStatus } from '@common/enum/campaignrun-status.enum';
 
 export class GetAllCampaignRunDto {
   @IsOptional()
-  @Transform(({ value }) => Number(value))
-  @IsNumberString()
-  page?: number = 1;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page: number = 1;
 
   @IsOptional()
-  @Transform(({ value }) => Number(value))
-  @IsNumberString()
-  limit?: number = 10;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit: number = 10;
 
   @IsOptional()
   @IsString()

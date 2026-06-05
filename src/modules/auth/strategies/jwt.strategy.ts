@@ -27,7 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private readonly redis: RedisService,
 
-    private readonly reflector: Reflector,
+    // private readonly reflector: Reflector,
 
     private readonly activeSessionService: ActivesessionService,
   ) {
@@ -70,18 +70,18 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         throw new UnauthorizedException('Token is globally revoked');
       }
 
-      const requiredRoles = this.reflector.getAllAndOverride<string[]>(
-        ROLES_KEY,
-        [request['route']?.stack?.[0]?.method],
-      );
+      // const requiredRoles = this.reflector.getAllAndOverride<string[]>(
+      //   ROLES_KEY,
+      //   [request['route']?.stack?.[0]?.method],
+      // );
 
-      if (requiredRoles && requiredRoles.length > 0) {
-        const userRole = decoded.role;
+      // if (requiredRoles && requiredRoles.length > 0) {
+      //   const userRole = decoded.role;
 
-        if (!userRole || !requiredRoles.includes(userRole)) {
-          throw new UnauthorizedException('Insufficient role');
-        }
-      }
+      //   if (!userRole || !requiredRoles.includes(userRole)) {
+      //     throw new UnauthorizedException('Insufficient role');
+      //   }
+      // }
 
       if (decoded.jti) {
         const incomingHashed = hashJti(decoded.jti);

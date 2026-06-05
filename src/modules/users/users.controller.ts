@@ -7,7 +7,7 @@ export class UsersController {
   constructor(
     private readonly usersService: UsersService,
   ) {}
-
+  
   async createUser(@Body() body :CreateUserDto) : Promise<void>{
      await this.usersService.createUser(body);
   }

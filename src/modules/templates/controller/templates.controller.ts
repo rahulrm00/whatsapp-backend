@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { MetaTemplateService } from '../services/meta-template.service';
 import { TemplateSyncService } from '../services/template-sync.service';
 import { TemplateValidatorService } from '../services/template-validation.service';
@@ -8,6 +8,7 @@ import { TemplateResponseDto } from '../dto/template-response.dto';
 import { SuccessResponseDto } from '../dto/success-response.dto';
 import { GetAllTemplatesDto } from '../dto/get-all-templates.dto';
 import { GetAllTemplatesResponseDto } from '../dto/get-all-template-response.dto';
+import { JwtAuthGuard } from '@common/guards/jwt.guard';
 
 @Controller('templates')
 export class TemplatesController {
@@ -17,17 +18,20 @@ export class TemplatesController {
         private readonly templateSyncService: TemplateSyncService,
         private readonly metaTemplateService: MetaTemplateService,
     ) {}
-
+    
+    @UseGuards(JwtAuthGuard)
     @Post('/v1/create')
     async createTemplate(@Body() body: CreateTemplateDto): Promise<SuccessResponseDto<TemplateResponseDto>> {
          return await this.templatesService.createTemplate(body);
     }
     
+    @UseGuards(JwtAuthGuard)
     @Get('/v1/getall')
     async getAllTemplates( @Query() query: GetAllTemplatesDto,): Promise<GetAllTemplatesResponseDto> {
         return await this.templatesService.getAllTemplates(query);
     }
-
+    
+    @UseGuards(JwtAuthGuard)
     @Get('/v1/:id')
     async getTemplateById(@Param('id') id: string): Promise<SuccessResponseDto<TemplateResponseDto>> {
         return await this.templatesService.getTemplateById(id);

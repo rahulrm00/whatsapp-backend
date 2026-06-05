@@ -40,7 +40,7 @@ export class CampaignRun {
 
   @Prop({
   type: Types.ObjectId,
-  ref: 'MetaMedia',
+  ref: 'CampaignMetaMedia',
   default: null,
 })
 mediaId?: Types.ObjectId;

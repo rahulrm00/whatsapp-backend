@@ -1,119 +1,104 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class MetaTemplateBuilder {
-
   build(
     template: any,
     customFields: Record<string, any>,
   ) {
-
     const components: any[] = [];
 
     for (const component of template.components) {
-
       // HEADER
-     if (component.type === 'HEADER') {
+      if (component.type === 'HEADER') {
+        // TEXT HEADER
+        if (component.format === 'TEXT') {
+          const parameters = this.extractVariables(
+            component.text,
+            customFields,
+            template.parameterFormat,
+          );
 
-  // TEXT HEADER
-  if (component.format === 'TEXT') {
+          if (parameters.length) {
+            components.push({
+              type: 'header',
+              parameters,
+            });
+          }
+        }
 
-    const parameters =
-      this.extractVariables(
-        component.text,
-        customFields,
-      );
+        // IMAGE HEADER
+        if (component.format === 'IMAGE') {
+          components.push({
+            type: 'header',
+            parameters: [
+              {
+                type: 'image',
+                image: this.buildMedia(
+                  customFields,
+                ),
+              },
+            ],
+          });
+        }
 
-    if (parameters.length) {
-      components.push({
-        type: 'header',
-        parameters,
-      });
-    }
-  }
+        // VIDEO HEADER
+        if (component.format === 'VIDEO') {
+          components.push({
+            type: 'header',
+            parameters: [
+              {
+                type: 'video',
+                video: this.buildMedia(
+                  customFields,
+                ),
+              },
+            ],
+          });
+        }
 
-  // IMAGE HEADER
-  if (component.format === 'IMAGE') {
-
-    components.push({
-      type: 'header',
-      parameters: [
-        {
-          type: 'image',
-          image: {
-            id: customFields.metaMediaId,
-          },
-        },
-      ],
-    });
-  }
-
-  // VIDEO HEADER
-  if (component.format === 'VIDEO') {
-
-    components.push({
-      type: 'header',
-      parameters: [
-        {
-          type: 'video',
-          video: {
-            id: customFields.metaMediaId,
-          },
-        },
-      ],
-    });
-  }
-
-  // DOCUMENT HEADER
-  if (component.format === 'DOCUMENT') {
-
-    components.push({
-      type: 'header',
-      parameters: [
-        {
-          type: 'document',
-          document: {
-            id: customFields.metaMediaId,
-          },
-        },
-      ],
-    });
-  }
-}
+        // DOCUMENT HEADER
+        if (component.format === 'DOCUMENT') {
+          components.push({
+            type: 'header',
+            parameters: [
+              {
+                type: 'document',
+                document:
+                  this.buildMedia(
+                    customFields,
+                  ),
+              },
+            ],
+          });
+        }
+      }
 
       // BODY
-      if (
-        component.type === 'BODY'
-      ) {
-
+      if (component.type === 'BODY') {
         const parameters =
           this.extractVariables(
             component.text,
             customFields,
+            template.parameterFormat,
           );
 
-        components.push({
-          type: 'body',
-          parameters,
-        });
+        if (parameters.length) {
+          components.push({
+            type: 'body',
+            parameters,
+          });
+        }
       }
 
       // BUTTONS
-      if (
-        component.type === 'BUTTONS'
-      ) {
-
+      if (component.type === 'BUTTONS') {
         component.buttons?.forEach(
-          (
-            button,
-            index,
-          ) => {
-
+          (button, index) => {
             if (
               button.type ===
               'URL'
             ) {
-
               components.push({
                 type: 'button',
                 sub_type: 'url',
@@ -122,10 +107,11 @@ export class MetaTemplateBuilder {
                 parameters: [
                   {
                     type: 'text',
-                    text:
+                    text: String(
                       customFields[
                         button.variable
-                      ],
+                      ] ?? '',
+                    ),
                   },
                 ],
               });
@@ -136,9 +122,7 @@ export class MetaTemplateBuilder {
     }
 
     return {
-
-      name:
-        template.name,
+      name: template.name,
 
       language: {
         code:
@@ -151,30 +135,77 @@ export class MetaTemplateBuilder {
 
   private extractVariables(
     text: string,
+    customFields: Record<string, any>,
+    parameterFormat:
+      | 'POSITIONAL'
+      | 'NAMED' = 'POSITIONAL',
+  ) {
+    const matches =
+      text.match(
+        /\{\{([^}]+)\}\}/g,
+      ) || [];
+
+    return matches.map(
+      (match) => {
+        const variable =
+          match
+            .replace('{{', '')
+            .replace('}}', '')
+            .trim();
+
+        // POSITIONAL
+        if (
+          parameterFormat ===
+          'POSITIONAL'
+        ) {
+          const index =
+            Number(variable) -
+            1;
+
+          return {
+            type: 'text',
+            text: String(
+              customFields
+                ?.variables?.[
+                index
+              ] ?? '',
+            ),
+          };
+        }
+
+        // NAMED
+        return {
+          type: 'text',
+          text: String(
+            customFields[
+              variable
+            ] ?? '',
+          ),
+        };
+      },
+    );
+  }
+
+  private buildMedia(
     customFields:
       Record<string, any>,
   ) {
+    if (
+      customFields.metaMediaId
+    ) {
+      return {
+        id: customFields.metaMediaId,
+      };
+    }
 
-    const matches =
-      text.match(
-        /\{\{\d+\}\}/g,
-      ) || [];
+    if (
+      customFields.mediaLink
+    ) {
+      return {
+        link: customFields.mediaLink,
+      };
+    }
 
-    const keys =
-      Object.keys(
-        customFields,
-      );
-
-    return matches.map(
-      (_, index) => ({
-        type: 'text',
-        text:
-          String(
-            customFields[
-              keys[index]
-            ] || '',
-          ),
-      }),
-    );
+    return {};
   }
 }

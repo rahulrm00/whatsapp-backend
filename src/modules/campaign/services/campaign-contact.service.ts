@@ -59,8 +59,9 @@ export class CampaignContactService {
       }
 
       // template variables
-      const requiredVariables = template.data.variables || [];
+      const parameterFormat = template.data.parameterFormat || 'NAMED';
 
+      const requiredVariables = template.data.variables || [];
       // parse excel
       const workbook = XLSX.read(file.buffer, {
         type: 'buffer',
@@ -84,8 +85,18 @@ export class CampaignContactService {
       // validate headers
       const headers = Object.keys(rows[0]);
 
-      const requiredColumns = ['phone', ...requiredVariables];
+      let requiredColumns = ['phone'];
 
+      if (parameterFormat === 'NAMED') {
+        requiredColumns = ['phone', ...requiredVariables];
+      }
+
+      if (parameterFormat === 'POSITIONAL') {
+        requiredColumns = [
+          'phone',
+          ...requiredVariables.map((_, index) => `var${index + 1}`),
+        ];
+      }
       const missingColumns = requiredColumns.filter(
         (column) => !headers.includes(column),
       );
@@ -133,20 +144,43 @@ export class CampaignContactService {
           // validate template variables
           let hasMissingVariable = false;
 
-          for (const variable of requiredVariables) {
-            if (
-              row[variable] === '' ||
-              row[variable] === null ||
-              row[variable] === undefined
-            ) {
-              failedRows.push({
-                row: rowNumber,
-                reason: `Missing variable: ${variable}`,
-              });
+          if (parameterFormat === 'NAMED') {
+            for (const variable of requiredVariables) {
+              if (
+                row[variable] === '' ||
+                row[variable] === null ||
+                row[variable] === undefined
+              ) {
+                failedRows.push({
+                  row: rowNumber,
+                  reason: `Missing variable: ${variable}`,
+                });
 
-              hasMissingVariable = true;
+                hasMissingVariable = true;
 
-              break;
+                break;
+              }
+            }
+          }
+
+          if (parameterFormat === 'POSITIONAL') {
+            for (let i = 0; i < requiredVariables.length; i++) {
+              const column = `var${i + 1}`;
+
+              if (
+                row[column] === '' ||
+                row[column] === null ||
+                row[column] === undefined
+              ) {
+                failedRows.push({
+                  row: rowNumber,
+                  reason: `Missing variable: ${column}`,
+                });
+
+                hasMissingVariable = true;
+
+                break;
+              }
             }
           }
 
@@ -157,8 +191,21 @@ export class CampaignContactService {
           }
 
           // extract fields
-          const { phone, name, email, ...customFields } = row;
+          const { phone, name, email, ...rest } = row;
 
+          let customFields: any = {};
+
+          if (parameterFormat === 'NAMED') {
+            customFields = rest;
+          }
+
+          if (parameterFormat === 'POSITIONAL') {
+            customFields = {
+              variables: requiredVariables.map(
+                (_, index) => rest[`var${index + 1}`],
+              ),
+            };
+          }
           // create contact
           validContacts.push({
             campaignId: campaignRun.campaignId,

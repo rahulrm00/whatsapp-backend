@@ -232,20 +232,76 @@ export class CampaignContactService {
         rowNumber++;
       }
 
-      // insert contacts
-      if (validContacts.length) {
-        await this.campaignContactModel.insertMany(validContacts, {
-          ordered: false,
-        });
+      let duplicateInFile = 0;
+      let duplicateInDb = 0;
+      let insertedCount = 0;
 
-        // update counts
-        await this.campaignRunModel.findByIdAndUpdate(campaignRunId, {
-          $inc: {
-            totalContacts: validContacts.length,
+      // Remove duplicates from uploaded file
+      const uniqueMap = new Map();
 
-            pendingCount: validContacts.length,
+      for (const contact of validContacts) {
+        const key = `${contact.campaignRunId}-${contact.phone}`;
+
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, contact);
+        }
+      }
+
+      duplicateInFile = validContacts.length - uniqueMap.size;
+
+      const uniqueContacts = Array.from(uniqueMap.values());
+
+      if (uniqueContacts.length) {
+        // Check existing contacts in DB
+        const existingContacts = await this.campaignContactModel.find(
+          {
+            campaignRunId,
+            phone: {
+              $in: uniqueContacts.map((c) => c.phone),
+            },
           },
-        });
+          {
+            phone: 1,
+          },
+        );
+
+        const existingPhones = new Set(existingContacts.map((c) => c.phone));
+
+        const contactsToInsert = uniqueContacts.filter(
+          (c) => !existingPhones.has(c.phone),
+        );
+
+        duplicateInDb = uniqueContacts.length - contactsToInsert.length;
+
+        if (contactsToInsert.length) {
+          try {
+            const result = await this.campaignContactModel.insertMany(
+              contactsToInsert,
+              {
+                ordered: false,
+              },
+            );
+
+            insertedCount = result.length;
+          } catch (error: any) {
+            if (error.writeErrors) {
+              const additionalDuplicates = error.writeErrors.length;
+
+              duplicateInDb += additionalDuplicates;
+
+              insertedCount = contactsToInsert.length - additionalDuplicates;
+            } else {
+              throw error;
+            }
+          }
+
+          await this.campaignRunModel.findByIdAndUpdate(campaignRunId, {
+            $inc: {
+              totalContacts: insertedCount,
+              pendingCount: insertedCount,
+            },
+          });
+        }
       }
 
       // response
@@ -254,9 +310,12 @@ export class CampaignContactService {
 
         totalRows: rows.length,
 
-        successCount: validContacts.length,
+        successCount: insertedCount,
 
-        failedCount: failedRows.length,
+        failedCount: failedRows.length + duplicateInFile + duplicateInDb,
+        duplicateInFile,
+
+        duplicateInDb,
 
         missingColumns,
 

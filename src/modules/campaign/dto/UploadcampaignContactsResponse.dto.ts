@@ -1,10 +1,12 @@
 export class UploadCampaignContactsResponseDto {
-
   message!: string;
 
   totalRows!: number;
 
   successCount!: number;
+  duplicateInFile?: number;
+
+  duplicateInDb?: number;
 
   failedCount!: number;
 

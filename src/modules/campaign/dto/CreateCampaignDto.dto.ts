@@ -25,6 +25,6 @@ export class CreateCampaignDto {
   status?: Status;
 
   @IsOptional()
-  @IsMongoId()
+  @IsString()
   createdBy?: string;
 }

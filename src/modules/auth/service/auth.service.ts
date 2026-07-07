@@ -1,4 +1,12 @@
-import { BadRequestException, ConflictException, Inject, Injectable, InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { RegisterDto } from '../dto/RegisterRequestDto.dto';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import {
@@ -29,7 +37,8 @@ export class AuthService {
   constructor(
     @InjectModel(AuthProvider.name)
     private readonly authProviderModel: Model<AuthProviderDocument>,
-    @InjectModel(Counter.name) private readonly counterModel: Model<CounterDocument>,
+    @InjectModel(Counter.name)
+    private readonly counterModel: Model<CounterDocument>,
     @InjectConnection()
     private readonly connection: Connection,
     private readonly usersService: UsersService,
@@ -59,46 +68,41 @@ export class AuthService {
           throw new ConflictException('Username already exists');
         }
       }
-       const counter =
-      await this.counterModel
-        .findOneAndUpdate(
-          {
-            name: "USER",
+      const counter = await this.counterModel.findOneAndUpdate(
+        {
+          name: 'USER',
+        },
+        {
+          $inc: {
+            seq: 1,
           },
-          {
-            $inc: {
-              seq: 1,
-            },
-          },
-          {
-            new: true,
-            upsert: true,
-            session,
-          },
-        );
+        },
+        {
+          new: true,
+          upsert: true,
+          session,
+        },
+      );
 
-      const userId =
-      `USR${String(counter.seq)
-        .padStart(5, '0')}`;
-       await this.usersService.createUser({
+      const userId = `USR${String(counter.seq).padStart(5, '0')}`;
+      await this.usersService.createUser({
         userId,
         name: body.name,
         email,
         username,
-       });
+      });
       const hashedPassword = await hashJti(body.password);
-        const newAuthProvider = new this.authProviderModel({
-            userId,
-            username,
-            email,
-            password: hashedPassword,
-            role: UserRole.ADMIN
-        });
+      const newAuthProvider = new this.authProviderModel({
+        userId,
+        username,
+        email,
+        password: hashedPassword,
+        role: UserRole.ADMIN,
+      });
 
-        await newAuthProvider.save({session});
-        await session.commitTransaction();
-        return 'User registered successfully';
-
+      await newAuthProvider.save({ session });
+      await session.commitTransaction();
+      return 'User registered successfully';
     } catch (error) {
       await session.abortTransaction();
       throw error;
@@ -108,87 +112,78 @@ export class AuthService {
   }
 
   async login(body: LoginDto): Promise<LoginResponseDto> {
-  try {
-    const username = body.username?.toLowerCase().trim();
+    try {
+      const username = body.username?.toLowerCase().trim();
 
-    if (!username || !body.password) {
-      throw new BadRequestException(
-        'Username and password are required',
-      );
-    }
+      if (!username || !body.password) {
+        throw new BadRequestException('Username and password are required');
+      }
 
-    const authProvider = await this.authProviderModel
-      .findOne({
-        username,
-        isDeleted: false,
-      })
-      .select('+password')
-      .lean();
+      const authProvider = await this.authProviderModel
+        .findOne({
+          username,
+          isDeleted: false,
+        })
+        .select('+password')
+        .lean();
 
-    if (!authProvider) {
-      throw new UnauthorizedException(
-        'Invalid username or password',
-      );
-    }
+      if (!authProvider) {
+        throw new UnauthorizedException('Invalid username or password');
+      }
 
-    const hashedPassword = await hashJti(body.password);
+      const hashedPassword = await hashJti(body.password);
 
-    const isPasswordValid =
-      hashedPassword === authProvider.password;
+      const isPasswordValid = hashedPassword === authProvider.password;
 
-    if (!isPasswordValid) {
-      throw new UnauthorizedException(
-        'Invalid username or password',
-      );
-    }
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid username or password');
+      }
 
-    const token = await this.issueTokensAndCreateSession({
-      userId: authProvider.userId.toString(),
-      userName: authProvider.username,
-      email: authProvider.email,
-      role: authProvider.role,
+      const token = await this.issueTokensAndCreateSession({
+        userId: authProvider.userId.toString(),
+        userName: authProvider.username,
+        email: authProvider.email,
+        role: authProvider.role,
 
-      deviceId: body.deviceId || 'unknown',
-      ipAddress: body.ipAddress || 'unknown',
-      userAgent: body.userAgent || 'unknown',
-      appVersion: body.appVersion || 'unknown',
-    });
+        deviceId: body.deviceId || 'unknown',
+        ipAddress: body.ipAddress || 'unknown',
+        userAgent: body.userAgent || 'unknown',
+        appVersion: body.appVersion || 'unknown',
+      });
 
-    await this.authProviderModel.updateOne(
-      { _id: authProvider._id },
-      {
-        $set: {
-          lastLoginAt: new Date(),
+      await this.authProviderModel.updateOne(
+        { _id: authProvider._id },
+        {
+          $set: {
+            lastLoginAt: new Date(),
+          },
         },
-      },
-    );
+      );
 
-    return {
-      message: 'Login successful',
+      return {
+        message: 'Login successful',
 
-      accessToken: token.accessToken,
-      refreshToken: token.refreshToken,
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
 
-      accessExp: token.accessExp,
-      refreshExp: token.refreshExp,
+        accessExp: token.accessExp,
+        refreshExp: token.refreshExp,
 
-      username: authProvider.username,
-      email: authProvider.email,
-    };
-  } catch (error : any) {
-    this.logger.error(
-      `Login error: ${error.message}`,
-      error.stack,
-    );
+        username: authProvider.username,
+        email: authProvider.email,
+      };
+    } catch (error: any) {
+      this.logger.error(`Login error: ${error.message}`, error.stack);
 
-    throw error;
+      throw error;
+    }
   }
-}
-    async getSignToken(req : SignTokensRequestDto) : Promise<SignTokensResponseDto>{
-    const {
-      subject, audience, accessTtlSec, refreshTtlSec, deviceId, claims,
-    } = req;
-     const access = await this.JwtService.signAccessToken(claims || {}, {
+  async getSignToken(
+    req: SignTokensRequestDto,
+  ): Promise<SignTokensResponseDto> {
+    const { subject, audience, accessTtlSec, refreshTtlSec, deviceId, claims } =
+      req;
+    const access = await this.JwtService.signAccessToken(claims || {}, {
       sub: subject!,
       aud: audience!,
       ttlSec: accessTtlSec!,
@@ -211,9 +206,11 @@ export class AuthService {
       accessExp: access.exp,
       refreshExp: refresh.exp,
     };
-   }
+  }
 
-   async issueTokensAndCreateSession(user: IssueTokensAndCreateSessionDto) :Promise<IssueTokensAndCreateSessionResponseDto> {
+  async issueTokensAndCreateSession(
+    user: IssueTokensAndCreateSessionDto,
+  ): Promise<IssueTokensAndCreateSessionResponseDto> {
     const uid = user.userId;
 
     const claims: Record<string, string> = {
@@ -224,14 +221,14 @@ export class AuthService {
     };
 
     const signResp = await this.getSignToken({
-        subject: uid,
-        issuer: process.env.JWT_ISSUER,
-        audience: process.env.JWT_DEFAULT_AUD,
-        claims,
-        accessTtlSec: Number(process.env.ACCESS_TTL) || 60 * 15,
-        refreshTtlSec: Number(process.env.REFRESH_TTL) || 60 * 60 * 24 * 30,
-        deviceId: user.deviceId,
-      });
+      subject: uid,
+      issuer: process.env.JWT_ISSUER,
+      audience: process.env.JWT_DEFAULT_AUD,
+      claims,
+      accessTtlSec: Number(process.env.ACCESS_TTL) || 60 * 15,
+      refreshTtlSec: Number(process.env.REFRESH_TTL) || 60 * 60 * 24 * 30,
+      deviceId: user.deviceId,
+    });
 
     const refreshJti = signResp.refreshJti;
     const refreshExp =
@@ -248,19 +245,19 @@ export class AuthService {
       this.redis.set(
         RedisKeys.accessCurrent(uid, user.deviceId),
         hashedAccess,
-        accessTtl
+        accessTtl,
       ),
       this.redis.set(
         RedisKeys.refreshCurrent(uid, user.deviceId),
         hashedRefresh,
-        ttl
+        ttl,
       ),
       this.redis.sadd(RedisKeys.devices(uid), user.deviceId),
       this.redis.del(RedisKeys.revokedUser(uid)),
     ]);
 
     this.logger.debug(
-      `✅ Cleared global revoked timestamp for user ${user.userId}`
+      `✅ Cleared global revoked timestamp for user ${user.userId}`,
     );
 
     const activeSessionData = {
@@ -281,14 +278,16 @@ export class AuthService {
       },
     };
 
-    await this.activeSession.createActiveSession(activeSessionData as ActiveSession);
+    await this.activeSession.createActiveSession(
+      activeSessionData as ActiveSession,
+    );
     this.logger.debug(
-      `✅ Active session created for user ${uid} on device ${user.deviceId}`
+      `✅ Active session created for user ${uid} on device ${user.deviceId}`,
     );
 
     const updatedSession = await this.activeSession.getFullActiveSession(
       uid,
-      user.deviceId
+      user.deviceId,
     );
     await this.cacheActiveSession(updatedSession);
 
@@ -300,202 +299,202 @@ export class AuthService {
     };
   }
 
- async getToken(body: GetTokenDto): Promise<SignTokensResponseDto> {
-  const verifyResp = await this.JwtService.verifyToken(
+  async getToken(body: GetTokenDto): Promise<SignTokensResponseDto> {
+    const verifyResp = await this.JwtService.verifyToken(
       body.refreshToken,
-      process.env.JWT_DEFAULT_AUD
-   );
-
-  if (!verifyResp.ok) {
-       throw new UnauthorizedException('Invalid refresh token');
-  }
-
-  const payload =verifyResp.payload;
-
-  const uid = payload.sub ?? payload['sub'];
-  const jti = payload.jti ?? payload['jti'];
-
-  const iat = Number(payload.iat);
-  const typ = payload.typ ?? '';
-
-  if (typ !== 'refresh') {
-    throw new UnauthorizedException('Token is not a refresh token');
-  }
-
-  let session: any = null;
-
-  try {
-    const sessionJson = await this.redis.get(
-      RedisKeys.activeSession(uid, body.deviceId || 'unknown')
+      process.env.JWT_DEFAULT_AUD,
     );
 
-    session =
-      typeof sessionJson === 'string'
-        ? JSON.parse(sessionJson)
-        : sessionJson;
+    if (!verifyResp.ok) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const payload = verifyResp.payload;
+
+    const uid = payload.sub ?? payload['sub'];
+    const jti = payload.jti ?? payload['jti'];
+
+    const iat = Number(payload.iat);
+    const typ = payload.typ ?? '';
+
+    if (typ !== 'refresh') {
+      throw new UnauthorizedException('Token is not a refresh token');
+    }
+
+    let session: any = null;
+
+    try {
+      const sessionJson = await this.redis.get(
+        RedisKeys.activeSession(uid, body.deviceId || 'unknown'),
+      );
+
+      session =
+        typeof sessionJson === 'string' ? JSON.parse(sessionJson) : sessionJson;
+
+      if (!session) {
+        this.logger.warn(
+          `No active session in cache for uid=${uid}, deviceId=${body.deviceId || 'unknown'}`,
+        );
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`Redis session retrieval failed: ${errMsg}`);
+    }
 
     if (!session) {
-      this.logger.warn(
-        `No active session in cache for uid=${uid}, deviceId=${body.deviceId || 'unknown'}`
+      session = await this.activeSession.getFullActiveSession(
+        uid,
+        body.deviceId || 'unknown',
       );
     }
-  } catch (err: unknown) {
-    const errMsg = err instanceof Error ? err.message : 'Unknown error';
-    this.logger.error(`Redis session retrieval failed: ${errMsg}`);
-  }
 
-  if (!session) {
-    session = await this.activeSession.getFullActiveSession(uid, body.deviceId || 'unknown');
-  }
+    if (!session) {
+      throw new UnauthorizedException('Active session not found');
+    }
 
-  if (!session) {
-    throw new UnauthorizedException('Active session not found');
-  }
+    let revokedTimestamp = 0;
 
-  let revokedTimestamp = 0;
+    try {
+      const revokedTimestampStr = await this.redis.get(
+        RedisKeys.revokedUser(uid),
+      );
+      revokedTimestamp = revokedTimestampStr ? Number(revokedTimestampStr) : 0;
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`Redis revoked timestamp fetch failed: ${errMsg}`);
 
-  try {
-    const revokedTimestampStr = await this.redis.get(
-      RedisKeys.revokedUser(uid)
-    );
-    revokedTimestamp = revokedTimestampStr
-      ? Number(revokedTimestampStr)
-      : 0;
-  } catch (err: unknown) {
-    const errMsg = err instanceof Error ? err.message : 'Unknown error';
-    this.logger.error(`Redis revoked timestamp fetch failed: ${errMsg}`);
+      revokedTimestamp = session.revokedAt
+        ? Math.floor(new Date(session.revokedAt).getTime() / 1000)
+        : 0;
+    }
 
-    revokedTimestamp = session.revokedAt
-      ? Math.floor(new Date(session.revokedAt).getTime() / 1000)
-      : 0;
-  }
+    if (iat < revokedTimestamp) {
+      throw new UnauthorizedException('Token globally revoked');
+    }
 
-  if (iat < revokedTimestamp) {
-    throw new UnauthorizedException('Token globally revoked');
-  }
+    let storedHash: string | null = null;
 
-  let storedHash: string | null = null;
+    try {
+      storedHash = await this.redis.get(
+        RedisKeys.refreshCurrent(uid, body.deviceId || 'unknown'),
+      );
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`Redis refresh hash retrieval failed: ${errMsg}`);
 
-  try {
-    storedHash = await this.redis.get(
-      RedisKeys.refreshCurrent(uid, body.deviceId || 'unknown')
-    );
-  } catch (err: unknown) {
-    const errMsg = err instanceof Error ? err.message : 'Unknown error';
-    this.logger.error(`Redis refresh hash retrieval failed: ${errMsg}`);
+      storedHash = hashJti(session.refreshTokenJti);
+    }
 
-    storedHash = hashJti(session.refreshTokenJti);
-  }
-
-  if (!storedHash) {
-    await this.revokeAllForUser(uid);
-    throw new UnauthorizedException(
-      'Refresh token invalid or missing — re-login required'
-    );
-  }
-
-  const incomingHash = hashJti(jti);
-
-  let isBlacklisted: string | null = null;
-
-  try {
-    isBlacklisted = await this.redis.get(
-      RedisKeys.refreshBlacklist(incomingHash)
-    );
-  } catch (err: unknown) {
-    const errMsg = err instanceof Error ? err.message : 'Unknown error';
-    this.logger.error(`Redis blacklist check failed: ${errMsg}`);
-  }
-
-  if (isBlacklisted === '1') {
-    if (storedHash !== incomingHash) {
-      await this.handleRefreshReuse(uid, body.deviceId || 'unknown');
+    if (!storedHash) {
+      await this.revokeAllForUser(uid);
       throw new UnauthorizedException(
-        'Token reuse detected — all sessions revoked'
+        'Refresh token invalid or missing — re-login required',
       );
     }
-    throw new UnauthorizedException('Refresh token blacklisted');
-  }
 
-  if (storedHash !== incomingHash) {
-    await this.revokeAllForUser(uid);
-    throw new UnauthorizedException(
-      'Refresh token mismatch — re-login required'
-    );
-  }
+    const incomingHash = hashJti(jti);
 
-  const newResp = await  this.getSignToken({
+    let isBlacklisted: string | null = null;
+
+    try {
+      isBlacklisted = await this.redis.get(
+        RedisKeys.refreshBlacklist(incomingHash),
+      );
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`Redis blacklist check failed: ${errMsg}`);
+    }
+
+    if (isBlacklisted === '1') {
+      if (storedHash !== incomingHash) {
+        await this.handleRefreshReuse(uid, body.deviceId || 'unknown');
+        throw new UnauthorizedException(
+          'Token reuse detected — all sessions revoked',
+        );
+      }
+      throw new UnauthorizedException('Refresh token blacklisted');
+    }
+
+    if (storedHash !== incomingHash) {
+      await this.revokeAllForUser(uid);
+      throw new UnauthorizedException(
+        'Refresh token mismatch — re-login required',
+      );
+    }
+
+    const newResp = await this.getSignToken({
       subject: uid,
       issuer: process.env.JWT_ISSUER,
       audience: process.env.JWT_DEFAULT_AUD,
       claims: {
-          name: payload.name ?? '',
-          email: payload.email ?? '',
-          phone: payload.phone ?? '',
-          role: payload.role ?? 'CUSTOMER',
+        name: payload.name ?? '',
+        email: payload.email ?? '',
+        phone: payload.phone ?? '',
+        role: payload.role ?? 'CUSTOMER',
       },
       accessTtlSec: Number(process.env.ACCESS_TTL || 60 * 15),
       refreshTtlSec: Number(process.env.REFRESH_TTL || 60 * 60 * 24 * 30),
       deviceId: body.deviceId || 'unknown',
     });
 
-    if (!newResp.accessToken || !newResp.refreshToken || !newResp.accessJti || !newResp.refreshJti) {
+    if (
+      !newResp.accessToken ||
+      !newResp.refreshToken ||
+      !newResp.accessJti ||
+      !newResp.refreshJti
+    ) {
       throw new InternalServerErrorException('Failed to generate new tokens');
     }
 
-  const newRefreshJti = newResp.refreshJti;
-  const newAccessJti = newResp.accessJti;
+    const newRefreshJti = newResp.refreshJti;
+    const newAccessJti = newResp.accessJti;
 
-  const oldHashed = storedHash;
-  const newHashed = hashJti(newRefreshJti);
-  const newAccessHashed = hashJti(newAccessJti);
+    const oldHashed = storedHash;
+    const newHashed = hashJti(newRefreshJti);
+    const newAccessHashed = hashJti(newAccessJti);
 
-  const refreshTtl = Math.max(
-    Number(newResp.refreshExp) - Math.floor(Date.now() / 1000),
-    1
-  );
+    const refreshTtl = Math.max(
+      Number(newResp.refreshExp) - Math.floor(Date.now() / 1000),
+      1,
+    );
 
-  const accessTtl = Number(process.env.ACCESS_TTL) || 60 * 15;
+    const accessTtl = Number(process.env.ACCESS_TTL) || 60 * 15;
 
-  await this.activeSession.updateRefreshJti({
-    userId: uid,
-    deviceId : body.deviceId || 'unknown',
-    accessTokenJti: newAccessJti,
-    refreshTokenJti: newRefreshJti,
-  });
+    await this.activeSession.updateRefreshJti({
+      userId: uid,
+      deviceId: body.deviceId || 'unknown',
+      accessTokenJti: newAccessJti,
+      refreshTokenJti: newRefreshJti,
+    });
 
-  await Promise.all([
-    this.redis.set(
-      RedisKeys.refreshCurrent(uid, body.deviceId || 'unknown'),
-      newHashed,
-      refreshTtl
-    ),
-    this.redis.set(
-      RedisKeys.refreshBlacklist(oldHashed!),
-      '1',
-      refreshTtl
-    ),
-    this.redis.set(
-      RedisKeys.accessCurrent(uid, body.deviceId || 'unknown'),
-      newAccessHashed,
-      accessTtl
-    ),
-  ]);
+    await Promise.all([
+      this.redis.set(
+        RedisKeys.refreshCurrent(uid, body.deviceId || 'unknown'),
+        newHashed,
+        refreshTtl,
+      ),
+      this.redis.set(RedisKeys.refreshBlacklist(oldHashed!), '1', refreshTtl),
+      this.redis.set(
+        RedisKeys.accessCurrent(uid, body.deviceId || 'unknown'),
+        newAccessHashed,
+        accessTtl,
+      ),
+    ]);
 
-  const updatedSession = await this.activeSession.getFullActiveSession(
-    uid,
-    body.deviceId || 'unknown'
-  );
+    const updatedSession = await this.activeSession.getFullActiveSession(
+      uid,
+      body.deviceId || 'unknown',
+    );
 
-  await this.cacheActiveSession(updatedSession);
+    await this.cacheActiveSession(updatedSession);
 
-  return {
-    accessToken: newResp.accessToken,
-    refreshToken: newResp.refreshToken,
-    accessExp: newResp.accessExp,
-    refreshExp: newResp.refreshExp,
-  };
-}
+    return {
+      accessToken: newResp.accessToken,
+      refreshToken: newResp.refreshToken,
+      accessExp: newResp.accessExp,
+      refreshExp: newResp.refreshExp,
+    };
+  }
 
   async revoke(uid: string, jti?: string, deviceId?: string): Promise<boolean> {
     try {
@@ -504,7 +503,7 @@ export class AuthService {
         await this.redis.set(
           RedisKeys.refreshBlacklist(hashed),
           '1',
-          60 * 60 * 24 * 30
+          60 * 60 * 24 * 30,
         );
       }
 
@@ -518,24 +517,24 @@ export class AuthService {
 
         const updatedSession = await this.activeSession.getFullActiveSession(
           uid,
-          deviceId
+          deviceId,
         );
         await this.cacheActiveSession(updatedSession);
       }
 
       return true;
-    } catch (err : any) {
+    } catch (err: any) {
       this.logger.error(`Failed to revoke tokens: ${err.message}`);
       throw new InternalServerErrorException('Token revocation failed');
     }
   }
 
- private async handleRefreshReuse(uid: string, deviceId: string) {
+  private async handleRefreshReuse(uid: string, deviceId: string) {
     // Strong action: revoke all refresh tokens for user
     await this.revokeAllForUser(uid);
     // Optionally send security email/push, create security incident record
     this.logger.warn(
-      `Refresh token reuse detected for uid=${uid}, deviceId=${deviceId}`
+      `Refresh token reuse detected for uid=${uid}, deviceId=${deviceId}`,
     );
   }
 
@@ -545,7 +544,7 @@ export class AuthService {
       await this.redis.set(
         RedisKeys.revokedUser(uid),
         revokeTimestamp,
-        60 * 60 * 24 * 365
+        60 * 60 * 24 * 365,
       );
 
       const devices = await this.redis.smembers(RedisKeys.devices(uid));
@@ -561,31 +560,30 @@ export class AuthService {
 
           const updatedSession = await this.activeSession.getFullActiveSession(
             uid,
-            deviceId
+            deviceId,
           );
           await this.cacheActiveSession(updatedSession);
-        })
+        }),
       );
 
       return true;
-    } catch (err : any) {
+    } catch (err: any) {
       this.logger.error(
-        `Failed to revoke all sessions for user ${uid}: ${err.message}`
+        `Failed to revoke all sessions for user ${uid}: ${err.message}`,
       );
       throw new InternalServerErrorException('Complete user revocation failed');
     }
   }
-   async cacheActiveSession(data: ActiveSession): Promise<void> {
+  async cacheActiveSession(data: ActiveSession): Promise<void> {
     const key = RedisKeys.activeSession(data.userId, data.deviceId);
     const ttlSeconds = 60 * 60 * 24 * 30;
 
     try {
       await this.redis.set(key, JSON.stringify(data), ttlSeconds);
-    } catch (err : any) {
+    } catch (err: any) {
       this.logger.error(
-        'Failed to cache active session in Redis: ' + err.message
+        'Failed to cache active session in Redis: ' + err.message,
       );
     }
   }
 }
-
